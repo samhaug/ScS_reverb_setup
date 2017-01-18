@@ -1,0 +1,18 @@
+#!/home/samhaug/anaconda2/bin/python
+
+import obspy
+import seispy
+
+print('read stz')
+stz = obspy.read('st_Z.pk')
+print('read ste')
+ste = obspy.read('st_E.pk')
+print('read stn')
+stn = obspy.read('st_N.pk')
+
+print('Rotate')
+l,q,t = seispy.data.rotate_phase(stz,stn,ste,['ScS'])
+
+print('write stt')
+t.write('st_T.pk',format='PICKLE')
+

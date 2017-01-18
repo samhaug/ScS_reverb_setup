@@ -1,0 +1,35 @@
+#!/home/samhaug/anaconda2/bin/python
+
+import glob
+from numpy import unique
+import obspy
+import sys
+
+try:
+    f = open('CMTSOLUTION')
+except IOError:
+    print('Must include CMTSOLUTION file in this directory')
+    sys.exit()
+f = f.read().strip().split('\n')[0].split()
+
+date = obspy.core.utcdatetime.UTCDateTime(int(f[1]),int(f[2]),int(f[3]),
+                                          int(f[4]),int(f[5]),
+                                          int(float(f[6])),5000)
+
+
+ldir = glob.glob('*.sac')
+
+net_list = []
+
+for ii in ldir:
+    net_list.append(ii.split('.')[0])
+
+networks =  unique(net_list)
+
+for ii in networks:
+    print('Reading '+ii)
+    st = obspy.read(ii+'*.sac')
+    for tr in st:
+        tr.stats.sac['o'] = date-tr.stats.starttime
+    st.write(ii+'.pk',format='PICKLE')
+
