@@ -92,8 +92,8 @@ st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/axisem/FJ_prem/st_T.pk')
 st.filter('lowpass',freq=1./25)
 st.normalize()
 
-time_d = find_ttimes(st[10])
-strip_reverb(st[10],time_d)
+time_d = find_ttimes(st[2])
+strip_reverb(st[2],time_d)
 
 
 
