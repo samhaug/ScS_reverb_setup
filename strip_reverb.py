@@ -84,7 +84,7 @@ def strip_reverb(tr,time_d):
     m6 = make_mask('ScS^660ScSScSScSScS')
     m7 = make_mask('ScSSv660SScSScSScS')
     plt.plot((m1+m2+m3+m4+m5+m6+m7)*tr.data,alpha=0.5)
-    plt.plot(tr.data,alpha=0.5)
+    #plt.plot(tr.data,alpha=0.5)
     plt.show()
 
 
