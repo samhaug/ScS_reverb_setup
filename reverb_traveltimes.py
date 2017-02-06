@@ -5,6 +5,11 @@ from obspy.taup import TauPyModel
 import numpy as np
 from glob import glob
 
+'''
+Use this to make lookup table for ScS reverb traveltime perturbations.
+
+'''
+
 
 def reverb_times(mod):
     '''
