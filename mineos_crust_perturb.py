@@ -28,7 +28,6 @@ def perturb_thickness_crust(filename,thickness,vs_pert):
     ind = np.argmin(np.abs(6371000.-(thickness*1000)-new_crust[:,0]))
     repeat_layer = new_crust[ind].copy()
     repeat_layer[3] = new_crust[0,3]
-    print repeat_layer
     crust_perturb[ind::] += vs_pert/100.
     new_crust[:,3]*=crust_perturb
 
@@ -49,8 +48,8 @@ def write_output(out_array,discont,amp,**kwargs):
         f.write('{}   {}   {}\n'.format(str(out_array.shape[0]),33,66))
         np.savetxt(f, out_array, delimiter="   ",fmt='%.1f')
 
-out = perturb_thickness_crust('./models/prem_flattop.txt',35,3)
-write_output(out,35000,3,title='35_3.txt')
+out = perturb_thickness_crust('./models/prem_flattop.txt',15,3)
+write_output(out,15000,3,title='15_3.txt')
 
 
 
