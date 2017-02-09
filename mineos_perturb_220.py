@@ -29,9 +29,10 @@ def write_output(out_array,amp):
         f.write('{}   {}   {}\n'.format(str(out_array.shape[0]),33,66))
         np.savetxt(f, out_array, delimiter="   ",fmt='%.1f')
 
-amp = 0.4
-out_array = read_model('./models/prem_noocean.txt',amp)
-write_output(out_array,amp)
+amp_list = np.arange(-3.5,4.0,0.5)
+for amp in amp_list:
+    out_array = read_model('./models/prem_noocean.txt',amp)
+    write_output(out_array,amp)
 
 
 
