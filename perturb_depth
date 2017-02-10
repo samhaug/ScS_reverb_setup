@@ -1,0 +1,60 @@
+#!/home/samhaug/anaconda2/bin/python
+#convert ndk file to mineos ready CMT file.
+from sys import argv
+
+'''
+Make mineos source paramatrization files with source depth perturbations.
+This is to evaluate what depth gives the correct separation of depth phases
+in time.
+
+This script is essentially ndk_2_mineos
+'''
+
+def write_source(pert,NDK):
+    f = open(NDK,'r')
+    f = f.read()
+    l = f.strip().split('\n')
+
+    evid = l[1].split()[0]
+    year = l[0].split()[1].split('/')[0]
+    month = l[0].split()[1].split('/')[1]
+    day = l[0].split()[1].split('/')[1]
+    hour = l[0].split()[2].split(':')[0]
+    min = l[0].split()[2].split(':')[1]
+    sec = l[0].split()[2].split(':')[2]
+    lat = l[0].split()[3]
+    lon = l[0].split()[4]
+    h = float(l[2].split()[7])+pert
+    step = '1.0'
+    halfd = l[1].split()[-1]
+    M_o = l[-1].split()[10]
+    M_rr = l[-2].split()[1]
+    M_tt = l[-2].split()[3]
+    M_pp = l[-2].split()[5]
+    M_rt = l[-2].split()[7]
+    M_rp = l[-2].split()[9]
+    M_tp = l[-2].split()[11]
+    M_n = l[-2].split()[0]
+    strike1,dip1,slip1,strike2,dip2,slip2 = l[-1].split()[11::]
+
+    jday = str(int(month)*12+int(day))
+    M_o =  M_o+'e'+M_n
+    M_n = '1e'+M_n
+
+    out_cmt = open('./pert_depth/'+evid+'_cmt_'+str(pert),'w')
+    out_cmt.write('{} {} {} {} {} {} {} {} {} {} {}\
+                   {} {} {} {} {} {} {} {} {} {} {} {} {} {}\n'
+               .format(evid,year,jday,hour,min,sec,lat,lon,h,step,halfd,
+                       M_o,M_rr,M_tt,M_pp,M_rt,M_rp,M_tp,M_n,
+                       strike1,dip1,slip1,strike2,dip2,slip2
+               ))
+
+
+NDK = '/home/samhaug/work1/ScS_reverb_data/20160130/NDK'
+pert_list = [-30,-20,-10,10,20,30]
+
+for ii in pert_list:
+    write_source(ii,NDK)
+
+
+
