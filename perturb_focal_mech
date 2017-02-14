@@ -9,7 +9,7 @@ Take existing CMT moment tensor from CMTSOLUTION file. Perturb elements of
 moment tensor by rotating the dip angle. See page 112 of Aki and Richards
 2nd edition.
 
-Can read in a moment tensor from a CMTfile or mineos source file. Both 
+Can read in a moment tensor from a CMTfile or mineos source file. Both
 outputs can be put into perturb_CMT
 '''
 
@@ -48,12 +48,12 @@ def perturb_CMT(fm,deldip,**kwargs):
     Box 4.4 "Cartesian components of hte moment tensor for a shear dislocation
     of arbitrary orientation" of Aki and Richards. Chap 4. Page 112
     '''
-    d_Mtt =  float(-1*(sin(d)*cos(r)*sin(2*s)+sin(2*d)*sin(r)*sin(s)**2)*M_0)
-    d_Mtp =  float(-1*(sin(d)*cos(r)*cos(2*s)+0.5*sin(2*d)*sin(r)*sin(2*s))*M_0)
-    d_Mtr =  float(-1*(cos(d)*cos(r)*cos(s)+cos(2*d)*sin(r)*sin(s))*M_0)
-    d_Mpp = float((sin(d)*cos(r)*sin(2*s)-sin(2*d)*sin(r)*cos(s)**2)*M_0)
-    d_Mpr = float((cos(d)*cos(r)*sin(s)-cos(2*d)*sin(r)*cos(s))*M_0)
-    d_Mrr = float(sin(2*d)*sin(r)*M_0)
+    d_Mtt =  float(-1*(sin(d)*cos(r)*sin(2*s)+sin(2*d)*sin(r)*sin(s)**2))
+    d_Mtp =  float(-1*(sin(d)*cos(r)*cos(2*s)+0.5*sin(2*d)*sin(r)*sin(2*s)))
+    d_Mtr =  float(-1*(cos(d)*cos(r)*cos(s)+cos(2*d)*sin(r)*sin(s)))
+    d_Mpp = float((sin(d)*cos(r)*sin(2*s)-sin(2*d)*sin(r)*cos(s)**2))
+    d_Mpr = float((cos(d)*cos(r)*sin(s)-cos(2*d)*sin(r)*cos(s)))
+    d_Mrr = float(sin(2*d)*sin(r))
 
     del_fm = [d_Mrr,d_Mtt,d_Mpp,d_Mtr,d_Mpr,d_Mtp]
     del_mt = beachball.MomentTensor(del_fm[0],del_fm[1],del_fm[2],del_fm[3],
@@ -61,9 +61,24 @@ def perturb_CMT(fm,deldip,**kwargs):
     plane2 = beachball.mt2plane(del_mt)
     beachball.beachball(plane)
     beachball.beachball(plane2)
+    return del_fm
+
+def write_mineos_CMTfile(CMTfile,del_mt,angle_pert):
+    f = open(CMTfile,'r')
+    l = f.read().strip().split()
+    for idx,ii in enumerate(l[12:18]):
+        l[idx+12] = str(del_mt[idx])
+    f.close()
+
+    f = open('./'+CMTfile.split('/')[-1]+'_'+str(angle_pert),'w')
+    for ii in l:
+        f.write(ii+' ')
+    f.close()
+
 
 fm,M_0 = read_mineos_CMTfile(CMTfile)
-perturb_CMT(fm,20,M_0=M_0)
+del_mt = perturb_CMT(fm,20,M_0=M_0)
+write_mineos_CMTfile(CMTfile,del_mt,20)
 
 
 
