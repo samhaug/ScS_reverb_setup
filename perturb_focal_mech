@@ -2,19 +2,28 @@
 
 import numpy as np
 from obspy.imaging import beachball
-import sympy
-from sympy import sin,cos
+from numpy import sin,cos
 
 '''
 Take existing CMT moment tensor from CMTSOLUTION file. Perturb elements of
 moment tensor by rotating the dip angle. See page 112 of Aki and Richards
 2nd edition.
+
+Can read in a moment tensor from a CMTfile or mineos source file. Both 
+outputs can be put into perturb_CMT
 '''
 
-CMTfile = '/home/samhaug/work1/ScS_reverb_data/20160130/CMTSOLUTION'
+#CMTfile = '/home/samhaug/work1/ScS_reverb_data/20160130/CMTSOLUTION'
+CMTfile = '/home/samhaug/work1/ScS_reverb_data/20160130/C201601300325A_cmt'
 
-def read_CMTfile(CMTfile):
+def read_mineos_CMTfile(CMTfile):
+    f = open(CMTfile,'r')
+    l = f.read().strip().split()
+    fm = np.array([float(i) for i in l[12:18]])
+    M_0 = float(l[18])
+    return fm,M_0
 
+def read_harvard_CMTfile(CMTfile):
     f = open(CMTfile,'r')
     l = f.read().strip().split('\n')
     Mrr = float(l[7].split()[-1])
@@ -25,68 +34,39 @@ def read_CMTfile(CMTfile):
     Mtp = float(l[12].split()[-1])
     return [Mrr,Mtt,Mpp,Mrt,Mrp,Mtp]
 
-def perturb_CMT(fm,deldip):
+def perturb_CMT(fm,deldip,**kwargs):
+    M_0 = kwargs.get('M_0',1e27)
 
     deldip = np.radians(deldip)
     mt = beachball.MomentTensor(fm[0],fm[1],fm[2],fm[3],fm[4],fm[5],0)
     plane = beachball.mt2plane(mt)
-    st = np.radians(plane.strike)
-    di = np.radians(plane.dip)
-    ra = np.radians(plane.rake)
+    s = np.radians(plane.strike)
+    d = np.radians(plane.dip)+deldip
+    r = np.radians(plane.rake)
 
     '''
     Box 4.4 "Cartesian components of hte moment tensor for a shear dislocation
     of arbitrary orientation" of Aki and Richards. Chap 4. Page 112
     '''
+    d_Mtt =  float(-1*(sin(d)*cos(r)*sin(2*s)+sin(2*d)*sin(r)*sin(s)**2)*M_0)
+    d_Mtp =  float(-1*(sin(d)*cos(r)*cos(2*s)+0.5*sin(2*d)*sin(r)*sin(2*s))*M_0)
+    d_Mtr =  float(-1*(cos(d)*cos(r)*cos(s)+cos(2*d)*sin(r)*sin(s))*M_0)
+    d_Mpp = float((sin(d)*cos(r)*sin(2*s)-sin(2*d)*sin(r)*cos(s)**2)*M_0)
+    d_Mpr = float((cos(d)*cos(r)*sin(s)-cos(2*d)*sin(r)*cos(s))*M_0)
+    d_Mrr = float(sin(2*d)*sin(r)*M_0)
 
-    d,r,s = sympy.symbols('d r s')
+    del_fm = [d_Mrr,d_Mtt,d_Mpp,d_Mtr,d_Mpr,d_Mtp]
+    del_mt = beachball.MomentTensor(del_fm[0],del_fm[1],del_fm[2],del_fm[3],
+                                 del_fm[4],del_fm[5],0)
+    plane2 = beachball.mt2plane(del_mt)
+    beachball.beachball(plane)
+    beachball.beachball(plane2)
 
-    d_Mtt =  -1*(sin(d)*cos(r)*sin(2*s)+sin(2*d)*sin(r)*sin(s)**2)
-    d_Mtp =  -1*(sin(d)*cos(r)*cos(2*s)+0.5*sin(2*d)*sin(r)*sin(2*s))
-    d_Mtr =  -1*(cos(d)*cos(r)*cos(s)+cos(2*d)*sin(r)*sin(s))
-    d_Mpp = (sin(d)*cos(r)*sin(2*s)-sin(2*d)*sin(r)*cos(s)**2)
-    d_Mpr = (cos(d)*cos(r)*sin(s)-cos(2*d)*sin(r)*cos(s))
-    d_Mrr = sin(2*d)*sin(r)
+fm,M_0 = read_mineos_CMTfile(CMTfile)
+perturb_CMT(fm,20,M_0=M_0)
 
-    dmtt = sympy.diff(d_Mtt,d).evalf(subs={d:di,s:st,r:ra})
-    dmtt2 = sympy.diff(d_Mtt,d,2).evalf(subs={d:di,s:st,r:ra})
 
-    dmtp = sympy.diff(d_Mtp,d).evalf(subs={d:di,s:st,r:ra})
-    dmtp2 = sympy.diff(d_Mtp,d,2).evalf(subs={d:di,s:st,r:ra})
 
-    dmtr = sympy.diff(d_Mtr,d).evalf(subs={d:di,s:st,r:ra})
-    dmtr2 = sympy.diff(d_Mtr,d,2).evalf(subs={d:di,s:st,r:ra})
 
-    dmpp = sympy.diff(d_Mpp,d).evalf(subs={d:di,s:st,r:ra})
-    dmpp2 = sympy.diff(d_Mpp,d,2).evalf(subs={d:di,s:st,r:ra})
-
-    dmpr = sympy.diff(d_Mpr,d).evalf(subs={d:di,s:st,r:ra})
-    dmpr2 = sympy.diff(d_Mpr,d,2).evalf(subs={d:di,s:st,r:ra})
-
-    dmrr = sympy.diff(d_Mrr,d).evalf(subs={d:di,s:st,r:ra})
-    dmrr2 = sympy.diff(d_Mrr,d,2).evalf(subs={d:di,s:st,r:ra})
-
-    r_fm = []
-    r_fm.append(float(fm[0] + dmrr*deldip*1e26+0.5*dmrr2*deldip**2*1e26))
-    r_fm.append(float(fm[1] + dmtt*deldip*1e26+0.5*dmtt2*deldip**2*1e26))
-    r_fm.append(float(fm[2] + dmpp*deldip*1e26+0.5*dmpp2*deldip**2*1e26))
-    r_fm.append(float(fm[3] + dmtr*deldip*1e26+0.5*dmtr2*deldip**2*1e26))
-    r_fm.append(float(fm[4] + dmpr*deldip*1e26+0.5*dmpr2*deldip**2*1e26))
-    r_fm.append(float(fm[5] + dmtp*deldip*1e26+0.5*dmtp2*deldip**2*1e26))
-
-    #mt = beachball.MomentTensor(r_fm[0],r_fm[1],r_fm[2],r_fm[3],r_fm[4],r_fm[5],0)
-    #plane = beachball.mt2plane(mt)
-    #beachball.beachball(plane)
-    rmt = beachball.MomentTensor(r_fm[0],r_fm[1],r_fm[2],r_fm[3],r_fm[4],r_fm[5],0)
-    #print r_fm
-    #print fm
-    plane = beachball.mt2plane(rmt)
-    beachball.beachball(r_fm)
-    print np.degrees(st),np.degrees(di),np.degrees(ra)
-    print plane.strike,plane.dip,plane.rake
-    beachball.beachball(fm)
-
-fm = read_CMTfile(CMTfile)
-perturb_CMT(fm,-50)
 
 
