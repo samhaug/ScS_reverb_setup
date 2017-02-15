@@ -19,7 +19,7 @@ CMTfile = '/home/samhaug/work1/ScS_reverb_data/20160130/C201601300325A_cmt'
 def read_mineos_CMTfile(CMTfile):
     f = open(CMTfile,'r')
     l = f.read().strip().split()
-    fm = np.array([float(i) for i in l[12:18]])
+    fm = [round(float(i),3) for i in l[12:18]]
     M_0 = float(l[18])
     return fm,M_0
 
@@ -48,19 +48,19 @@ def perturb_CMT(fm,deldip,**kwargs):
     Box 4.4 "Cartesian components of hte moment tensor for a shear dislocation
     of arbitrary orientation" of Aki and Richards. Chap 4. Page 112
     '''
-    d_Mtt =  float(-1*(sin(d)*cos(r)*sin(2*s)+sin(2*d)*sin(r)*sin(s)**2))
-    d_Mtp =  float(-1*(sin(d)*cos(r)*cos(2*s)+0.5*sin(2*d)*sin(r)*sin(2*s)))
-    d_Mtr =  float(-1*(cos(d)*cos(r)*cos(s)+cos(2*d)*sin(r)*sin(s)))
-    d_Mpp = float((sin(d)*cos(r)*sin(2*s)-sin(2*d)*sin(r)*cos(s)**2))
-    d_Mpr = float((cos(d)*cos(r)*sin(s)-cos(2*d)*sin(r)*cos(s)))
-    d_Mrr = float(sin(2*d)*sin(r))
+    d_Mtt =  round(float(-1*(sin(d)*cos(r)*sin(2*s)+sin(2*d)*sin(r)*sin(s)**2))*10,3)
+    d_Mtp =  round(float(-1*(sin(d)*cos(r)*cos(2*s)+0.5*sin(2*d)*sin(r)*sin(2*s)))*10,3)
+    d_Mtr =  round(float(-1*(cos(d)*cos(r)*cos(s)+cos(2*d)*sin(r)*sin(s)))*10,3)
+    d_Mpp = round(float((sin(d)*cos(r)*sin(2*s)-sin(2*d)*sin(r)*cos(s)**2))*10,3)
+    d_Mpr = round(float((cos(d)*cos(r)*sin(s)-cos(2*d)*sin(r)*cos(s)))*10.,3)
+    d_Mrr = round(float(sin(2*d)*sin(r))*10.,3)
 
     del_fm = [d_Mrr,d_Mtt,d_Mpp,d_Mtr,d_Mpr,d_Mtp]
-    del_mt = beachball.MomentTensor(del_fm[0],del_fm[1],del_fm[2],del_fm[3],
-                                 del_fm[4],del_fm[5],0)
-    plane2 = beachball.mt2plane(del_mt)
-    beachball.beachball(plane)
-    beachball.beachball(plane2)
+    #del_mt = beachball.MomentTensor(del_fm[0],del_fm[1],del_fm[2],del_fm[3],
+    #                             del_fm[4],del_fm[5],0)
+    #plane2 = beachball.mt2plane(del_mt)
+    #beachball.beachball(plane)
+    #beachball.beachball(plane2)
     return del_fm
 
 def write_mineos_CMTfile(CMTfile,del_mt,angle_pert):
@@ -70,15 +70,18 @@ def write_mineos_CMTfile(CMTfile,del_mt,angle_pert):
         l[idx+12] = str(del_mt[idx])
     f.close()
 
-    f = open('./'+CMTfile.split('/')[-1]+'_'+str(angle_pert),'w')
+    f = open('./pert_cmt/'+CMTfile.split('/')[-1]+'_'+str(angle_pert),'w')
     for ii in l:
         f.write(ii+' ')
+    f.write('\n')
     f.close()
 
-
 fm,M_0 = read_mineos_CMTfile(CMTfile)
-del_mt = perturb_CMT(fm,20,M_0=M_0)
-write_mineos_CMTfile(CMTfile,del_mt,20)
+print fm
+
+for ang in [-3,-2,-1,1,2,3]:
+    del_mt = perturb_CMT(fm,ang,M_0=M_0)
+    write_mineos_CMTfile(CMTfile,del_mt,ang)
 
 
 
