@@ -7,21 +7,21 @@ from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 
 '''
-Use this to perturb the upper 220km of the mantle to get best estimate
-of ScS reverberation times.
-
-This script wants to read prem_noocean.txt
+Use this script to perturb full mantle attenuation from PREM.
+Make sure to set the input txt file to the correctly perturbed 220km
+and above PREM model.
 '''
+
+in_model = './perturb_220/220_3.0.txt'
 
 def read_model(filename,perturb):
     p = np.genfromtxt(filename,skip_header=3)
-    p[147::,3] *= (1+perturb/100.)
-    p[147::,7] *= (1+perturb/100.)
+    p[66::,5] *= (1+perturb/100.)
     return p
 
 def write_output(out_array,amp):
     #title = kwargs.get('title','test.txt')
-    title = './perturb_220/'+'220_'+str(amp)+'.txt'
+    title = './perturb_att/'+'att_'+str(amp)+'.txt'
     with open(title, 'w') as f:
         f.write('Radius: {} km, Amplitude: {} %vs\n'.format(str(220),
                 str(amp)))
@@ -29,9 +29,11 @@ def write_output(out_array,amp):
         f.write('{}   {}   {}\n'.format(str(out_array.shape[0]),33,66))
         np.savetxt(f, out_array, delimiter="   ",fmt='%.1f')
 
-amp_list = np.arange(-3.5,4.0,0.5)
+#amp_list = np.arange(-3.5,4.0,0.5)
+amp_list = [20,30,40,50,60]
+
 for amp in amp_list:
-    out_array = read_model('./models/prem_noocean.txt',amp)
+    out_array = read_model(in_model,amp)
     write_output(out_array,amp)
 
 
