@@ -1,0 +1,41 @@
+#!/home/samhaug/anaconda2/bin/python
+
+from sys import argv
+import numpy as np
+from scipy.signal import blackman
+from scipy.interpolate import interp1d
+from matplotlib import pyplot as plt
+
+'''
+Use this script to perturb full mantle attenuation from PREM.
+Make sure to set the input txt file to the correctly perturbed 220km
+and above PREM model.
+'''
+
+in_model = './perturb_220/220_3.0.txt'
+
+def read_model(filename,perturb):
+    p = np.genfromtxt(filename,skip_header=3)
+    p[66::,5] *= (1+perturb/100.)
+    return p
+
+def write_output(out_array,amp):
+    #title = kwargs.get('title','test.txt')
+    title = './perturb_att/'+'att_'+str(amp)+'.txt'
+    with open(title, 'w') as f:
+        f.write('Radius: {} km, Amplitude: {} %vs\n'.format(str(220),
+                str(amp)))
+        f.write('1    1.0000   1\n')
+        f.write('{}   {}   {}\n'.format(str(out_array.shape[0]),33,66))
+        np.savetxt(f, out_array, delimiter="   ",fmt='%.1f')
+
+#amp_list = np.arange(-3.5,4.0,0.5)
+amp_list = [70,80,90,100,120,150,200]
+
+for amp in amp_list:
+    out_array = read_model(in_model,amp)
+    write_output(out_array,amp)
+
+
+
+
