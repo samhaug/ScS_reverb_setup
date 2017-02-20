@@ -15,31 +15,7 @@ Mask all but zeroth order reverb from synthetic. Subtract from data.
 Save higher order reverberations of data
 '''
 
-def find_ttimes(tr,model):
-    '''
-    Find the traveltimes of ScS reverberations for the 660
-    '''
-    gcarc = tr.stats.sac['gcarc']
-    evdp = tr.stats.sac['evdp']
-    time_d = {}
-    phase_list = [
-                  'ScSScS',
-                  'sScSScS',
-                  'ScSScSScS',
-                  'sScSScSScS',
-                  'ScSScSScSScS',
-                  'sScSScSScSScS',
-                  'ScSScSScSScSScS',
-                  'sScSScSScSScSScS',
-                 ]
-    arrivals = model.get_travel_times(source_depth_in_km=evdp,
-                                      distance_in_degree=gcarc,
-                                      phase_list = phase_list)
-    for i,j in enumerate(phase_list):
-        time_d[j] = arrivals[i].time
-    return time_d
-
-def strip_reverb(tr,time_d):
+def strip_reverb(tr):
     '''
     Use a tukey window to mask an axisem
     trace and only pass the reverberations
@@ -48,26 +24,14 @@ def strip_reverb(tr,time_d):
     npts = tr.stats.npts
     masked_trace = tr.copy()
 
-    def make_mask(phase):
-        S = time_d[phase]
-        sS = time_d['s'+phase]
-        diff = int(abs(sS-S))
-        window = (S-5,S+2*diff+38)
-        print window
-        t = tukey(int((window[1]-window[0])*sr),0.2)
-        start = np.zeros(int(window[0]*sr))
-        end = np.zeros(npts-int(window[1]*sr))
-        mask = np.hstack((start,t,end))
-        if len(mask) > len(tr.data):
-            mask = mask[0:len(mask)-len(tr.data)]
-        if len(mask) < len(tr.data):
-            mask = np.hstack((mask,np.zeros(len(tr.data)-len(mask))))
-        return mask
+    t1 = tukey(185,0.2)
+    m1 = np.hstack((np.zeros(30),t1,np.zeros(npts-(30+185))))
+    t2 = tukey(175,0.2)
+    m2 = np.hstack((np.zeros(945),t2,np.zeros(npts-(945+175))))
+    t3 = tukey(160,0.2)
+    m3 = np.hstack((np.zeros(1888),t3,np.zeros(npts-(1888+160))))
+    masked_trace.data = tr.data*(m1+m2+m3)
 
-    m1 = make_mask('ScSScS')
-    m2 = make_mask('ScSScSScS')
-    m3 = make_mask('ScSScSScSScS')
-    masked_trace.data = (m1+m2+m3)*tr.data
     return masked_trace
 
 def data_setup(data_dir):
@@ -119,11 +83,9 @@ sts = synth_setup(syn_dir,std)
 #    seispy.plot.plot(tr,phase_list=['ScSScS'])
 
 for idx, tr in enumerate(sts):
-     time_d = find_ttimes(tr,model)
-#    m_trace = strip_reverb(tr,time_d)
-     m_trace = align_synth_data(std[idx],tr)
-     plt.plot(m_trace.data,alpha=0.5)
-     plt.plot(std[idx].data,alpha=0.5)
+     mtr = strip_reverb(tr)
+     mtr = align_synth_data(std[idx],mtr)
+     plt.plot(std[idx].data-mtr.data)
      plt.show()
 
 
