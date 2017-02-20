@@ -1,6 +1,7 @@
 #!/home/samhaug/anaconda2/bin/python
 #convert ndk file to mineos ready CMT file.
 from sys import argv
+import numpy as np
 
 '''
 Make mineos source paramatrization files with source depth perturbations.
@@ -41,7 +42,7 @@ def write_source(pert,NDK):
     M_o =  M_o+'e'+M_n
     M_n = '1e'+M_n
 
-    out_cmt = open('./pert_depth/'+evid+'_cmt_'+str(pert),'w')
+    out_cmt = open('./depth_perturb/'+evid+'_cmt_'+str(pert),'w')
     out_cmt.write('{} {} {} {} {} {} {} {} {} {} {}\
                    {} {} {} {} {} {} {} {} {} {} {} {} {} {}\n'
                .format(evid,year,jday,hour,min,sec,lat,lon,h,step,halfd,
@@ -51,6 +52,7 @@ def write_source(pert,NDK):
 
 NDK = '/home/samhaug/work1/ScS_reverb_data/20160130/NDK'
 pert_list = [-30,-20,-10,10,20,30]
+pert_list = np.arange(-20,21,1)
 
 for ii in pert_list:
     write_source(ii,NDK)

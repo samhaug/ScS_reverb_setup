@@ -10,7 +10,6 @@ Use this to make lookup table for ScS reverb traveltime perturbations.
 
 '''
 
-
 def reverb_times(mod):
     '''
     Find reverberation traveltimes from 1D model with taup

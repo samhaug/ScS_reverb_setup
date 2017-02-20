@@ -26,7 +26,6 @@ def write_taup(vel_array,fname):
         np.savetxt(f,vel_array,delimiter='   ',fmt='%0.4f')
 
 
-for ii in listdir('./perturb_220'):
-    vel = read_mineos_vel('./perturb_220/'+ii)
-    name = ii.split('.txt')[0].split('_')[1]
-    write_taup(vel,'prem_'+name+'.tvel')
+#for ii in listdir('./perturb_220'):
+vel = read_mineos_vel('./vel_perturb/vel_3.0.txt')
+write_taup(vel,'prem_3.0.tvel')

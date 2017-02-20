@@ -21,7 +21,7 @@ def read_model(filename,perturb):
 
 def write_output(out_array,amp):
     #title = kwargs.get('title','test.txt')
-    title = './perturb_220/'+'220_'+str(amp)+'.txt'
+    title = './vel_perturb/'+'vel_'+str(amp)+'.txt'
     with open(title, 'w') as f:
         f.write('Radius: {} km, Amplitude: {} %vs\n'.format(str(220),
                 str(amp)))
@@ -29,7 +29,7 @@ def write_output(out_array,amp):
         f.write('{}   {}   {}\n'.format(str(out_array.shape[0]),33,66))
         np.savetxt(f, out_array, delimiter="   ",fmt='%.1f')
 
-amp_list = np.arange(-3.5,4.0,0.5)
+amp_list = np.arange(-5.0,5.2,0.2)
 for amp in amp_list:
     out_array = read_model('./models/prem_noocean.txt',amp)
     write_output(out_array,amp)

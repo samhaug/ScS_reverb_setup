@@ -1,0 +1,118 @@
+#!/home/samhaug/anaconda2/bin/python
+
+import numpy as np
+from obspy.imaging import beachball
+from numpy import sin,cos
+
+'''
+Take existing CMT moment tensor from CMTSOLUTION file. Perturb elements of
+moment tensor by rotating the dip angle. See page 112 of Aki and Richards
+2nd edition.
+
+Can read in a moment tensor from a CMTfile or mineos source file. Both
+outputs can be put into perturb_CMT
+'''
+
+#CMTfile = '/home/samhaug/work1/ScS_reverb_data/20160130/CMTSOLUTION'
+CMTfile = '/home/samhaug/work1/ScS_reverb_data/20160130/C201601300325A_cmt'
+
+def read_mineos_CMTfile(CMTfile):
+    f = open(CMTfile,'r')
+    l = f.read().strip().split()
+    fm = [round(float(i),3) for i in l[12:18]]
+    np1 = [int(i) for i in l[-3::]]
+    np2 = [int(i) for i in l[-6:-3]]
+    M_0 = float(l[18])
+    return fm,M_0,np1,np2
+
+def read_harvard_CMTfile(CMTfile):
+    f = open(CMTfile,'r')
+    l = f.read().strip().split('\n')
+    Mrr = float(l[7].split()[-1])
+    Mtt = float(l[8].split()[-1])
+    Mpp = float(l[9].split()[-1])
+    Mrt = float(l[10].split()[-1])
+    Mrp = float(l[11].split()[-1])
+    Mtp = float(l[12].split()[-1])
+    return [Mrr,Mtt,Mpp,Mrt,Mrp,Mtp]
+
+def perturb_CMT(fm,deldip,**kwargs):
+    M_0 = kwargs.get('M_0',1e27)
+
+    deldip = np.radians(deldip)
+    mt = beachball.MomentTensor(fm[0],fm[1],fm[2],fm[3],fm[4],fm[5],0)
+    plane = beachball.mt2plane(mt)
+    s = np.radians(plane.strike)
+    d = np.radians(plane.dip)
+    r = np.radians(plane.rake)+deldip
+    '''
+    Box 4.4 "Cartesian components of hte moment tensor for a shear dislocation
+    of arbitrary orientation" of Aki and Richards. Chap 4. Page 112
+    '''
+    d_Mtt = round(float(-1*(sin(d)*cos(r)*sin(2*s)+sin(2*d)*sin(r)*sin(s)**2))*10,3)
+    d_Mtp = round(float(-1*(sin(d)*cos(r)*cos(2*s)+0.5*sin(2*d)*sin(r)*sin(2*s)))*10,3)
+    d_Mtr = round(float(-1*(cos(d)*cos(r)*cos(s)+cos(2*d)*sin(r)*sin(s)))*10,3)
+    d_Mpp = round(float((sin(d)*cos(r)*sin(2*s)-sin(2*d)*sin(r)*cos(s)**2))*10,3)
+    d_Mpr = round(float((cos(d)*cos(r)*sin(s)-cos(2*d)*sin(r)*cos(s)))*10.,3)
+    d_Mrr = round(float(sin(2*d)*sin(r))*10.,3)
+
+    del_fm = [d_Mrr,d_Mtt,d_Mpp,d_Mtr,d_Mpr,d_Mtp]
+    del_mt = beachball.MomentTensor(del_fm[0],del_fm[1],del_fm[2],del_fm[3],
+                                 del_fm[4],del_fm[5],0)
+    plane2 = beachball.mt2plane(del_mt)
+    #beachball.beachball(plane)
+    #beachball.beachball(plane2)
+    return del_fm
+
+def perturb_np(nod_pl,deldip,**kwargs):
+    M_0 = kwargs.get('M_0',1e27)
+
+    deldip = np.radians(deldip)
+    s = np.radians(nod_pl[0])
+    d = np.radians(nod_pl[1])+deldip
+    r = np.radians(nod_pl[2])
+
+    '''
+    Box 4.4 "Cartesian components of hte moment tensor for a shear dislocation
+    of arbitrary orientation" of Aki and Richards. Chap 4. Page 112
+    '''
+    d_Mtt = round(float(-1*(sin(d)*cos(r)*sin(2*s)+sin(2*d)*sin(r)*sin(s)**2))*10,3)
+    d_Mtp = round(float(-1*(sin(d)*cos(r)*cos(2*s)+0.5*sin(2*d)*sin(r)*sin(2*s)))*10,3)
+    d_Mtr = round(float(-1*(cos(d)*cos(r)*cos(s)+cos(2*d)*sin(r)*sin(s)))*10,3)
+    d_Mpp = round(float((sin(d)*cos(r)*sin(2*s)-sin(2*d)*sin(r)*cos(s)**2))*10,3)
+    d_Mpr = round(float((cos(d)*cos(r)*sin(s)-cos(2*d)*sin(r)*cos(s)))*10.,3)
+    d_Mrr = round(float(sin(2*d)*sin(r))*10.,3)
+
+    del_fm = [d_Mrr,d_Mtt,d_Mpp,d_Mtr,d_Mpr,d_Mtp]
+    del_mt = beachball.MomentTensor(del_fm[0],del_fm[1],del_fm[2],del_fm[3],
+                                 del_fm[4],del_fm[5],0)
+    #lane2 = beachball.mt2plane(del_mt)
+    #beachball.beachball(plane2)
+    return del_fm
+
+def write_mineos_CMTfile(CMTfile,del_mt,angle_pert,pert_depth):
+    f = open(CMTfile,'r')
+    l = f.read().strip().split()
+    l[8] = str(float(l[8])+pert_depth)
+    for idx,ii in enumerate(l[12:18]):
+        l[idx+12] = str(del_mt[idx])
+    f.close()
+
+    f = open('./dip_perturb/'+CMTfile.split('/')[-1]+'_'+str(angle_pert),'w')
+    for ii in l:
+        f.write(ii+' ')
+    f.write('\n')
+    f.close()
+
+fm,M_0,np1,np2 = read_mineos_CMTfile(CMTfile)
+
+pert_depth = 6
+for ang in np.arange(-40,42,2):
+    del_mt = perturb_np(np1,ang,M_0=M_0)
+    write_mineos_CMTfile(CMTfile,del_mt,ang,pert_depth)
+
+
+
+
+
+
