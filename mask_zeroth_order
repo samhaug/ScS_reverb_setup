@@ -39,12 +39,14 @@ def data_setup(data_dir):
     st_data = obspy.read(data_dir+'FJ_clean.pk')
     st_data = seispy.data.normalize_on_envelope(st_data,phase=['ScSScS'])
     for idx,tr in enumerate(st_data):
+        st_data[idx].stats.location = st_data[idx].stats.sac['gcarc']
         o = tr.stats.sac['o']
         starttime = tr.stats.starttime
         st_data[idx] = seispy.data.phase_window(tr,['ScSScS'],window=(-50,2050))
         st_data[idx].data += -1*st_data[idx].data.mean()
     st_data.interpolate(1)
     st_data = seispy.data.align_on_phase(st_data,phase=['ScSScS'],a_min=False)
+    st_data.sort(['location'])
     return st_data
 
 def synth_setup(syn_dir,st_data):
@@ -55,12 +57,14 @@ def synth_setup(syn_dir,st_data):
     st_syn = seispy.data.normalize_on_envelope(st_syn,phase=['ScSScS'])
     st_syn = seispy.data.align_on_phase(st_syn,phase=['ScSScS'],a_min=False)
     for idx,tr in enumerate(st_syn):
+        st_syn[idx].stats.location = st_syn[idx].stats.sac['gcarc']
         st_syn[idx] = seispy.data.phase_window(tr,['ScSScS'],window=(-50,2050))
         st_syn[idx].stats.starttime = st_data[idx].stats.starttime
         st_syn[idx].data += -1*st_syn[idx].data.mean()
         st_syn[idx].stats.sac['gcarc'] = st_data[idx].stats.sac['gcarc']
     st_syn.interpolate(1)
     st_syn = seispy.data.align_on_phase(st_syn,phase=['ScSScS'],a_min=False)
+    st_syn.sort(['location'])
     return st_syn
 
 def align_synth_data(trd,trs):
@@ -78,17 +82,17 @@ model = TauPyModel(model='prem_3.0')
 
 std = data_setup(data_dir)
 sts = synth_setup(syn_dir,std)
-
-#for tr in std[::3]:
-#    seispy.plot.plot(tr,phase_list=['ScSScS'])
+st_mask = sts.copy()
 
 for idx, tr in enumerate(sts):
      mtr = strip_reverb(tr)
      mtr = align_synth_data(std[idx],mtr)
-     plt.plot(std[idx].data-mtr.data)
+     plt.plot(std[idx].data,alpha=0.5)
+     plt.plot(mtr.data,alpha=0.5)
      plt.show()
+     st_mask[idx].data = std[idx].data-mtr.data
 
-
+st_mask.write(data_dir+'FJ_mask.pk',format='PICKLE')
 
 
 

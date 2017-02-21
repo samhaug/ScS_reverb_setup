@@ -1,0 +1,48 @@
+#!/home/samhaug/anaconda2/bin/python
+
+import numpy as np
+from os import listdir
+from scipy.interpolate import interp1d
+
+'''
+This is similar to make_taup, but it will make a file that can be referenced
+every 10km for arbitrary mid mantle discontinuity finding.
+'''
+
+def read_mineos_vel(file_name):
+
+    vel = np.genfromtxt(file_name,skip_header=3)
+    vel = vel[:,0:4]
+    vel *= 1/1000.
+    vel[:,0] = 6371. - vel[:,0]
+    vel = np.flipud(vel)
+    vel = np.vstack((vel[:,0],vel[:,2],vel[:,3],vel[:,1])).T
+    return vel
+
+def write_taup(vel_array,fname):
+
+    mantle = vel_array[0:118,:]
+    mantle_rad = mantle[:,0]
+    f = interp1d(mantle[:,0],mantle,axis=0)
+    new_mantle_rad = np.arange(mantle_rad.min(),mantle_rad.max(),10)
+    new_mantle_rad_5 = np.arange(mantle_rad.min(),mantle_rad.max(),5)
+    new_mantle = f(new_mantle_rad)
+    new_mantle_val = f(new_mantle_rad_5)
+    new_mantle = np.repeat(new_mantle,2,axis=0)
+    new_mantle[0:-1,1::] = new_mantle_val[:,1::]
+    #for ii,idx in enumerate(new_mantle[1:-2:2]):
+    #    new_mantle[ii,1] = np.mean([new_mantle[ii-1,1],new_mantle[ii+1,1]])
+    #    new_mantle[ii,2] = np.mean([new_mantle[ii-1,2],new_mantle[ii+1,2]])
+    #    new_mantle[ii,3] = np.mean([new_mantle[ii-1,3],new_mantle[ii+1,3]])
+
+    vel_array = np.vstack((new_mantle,vel_array[118::,:]))
+
+    with open(fname,'w') as f:
+        f.write('prem_model.tvel P\n')
+        f.write('prem_model.tvel S\n')
+        np.savetxt(f,vel_array,delimiter='   ',fmt='%0.4f')
+
+
+#for ii in listdir('./perturb_220'):
+vel = read_mineos_vel('./vel_perturb/vel_0.0.txt')
+write_taup(vel,'prem_0.0_10.tvel')
