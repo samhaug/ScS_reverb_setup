@@ -109,22 +109,22 @@ def align_synth_data(trd,trs):
     return trs
 
 data_dir = '/home/samhaug/work1/ScS_reverb_data/20160130/'
-syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v0.0/FJ_v0.0_h0/'
+syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0/FJ_3.0_h6/'
 syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/prem_FJ_okhotsk/'
 sts = obspy.read(syn_dir+'st_T.pk')
 sts.filter('bandpass',freqmin=1/60.,freqmax=1/25.)
 sts.integrate().normalize()
-model_10 = TauPyModel(model='prem_0.0_10')
+model_10 = TauPyModel(model='prem_3.0_10')
 
 std = obspy.read(data_dir+'FJ_clean.pk')
 #std = data_setup(data_dir)
 #sts = synth_setup(syn_dir,std)
 
 
-b,t,ba,ta = find_reverb_times(sts[10],500,model_10)
-seispy.plot.plot(sts[10],phase_list=t+b,model=model_10)
-b,t,ba,ta = find_reverb_times(sts[10],300,model_10)
-seispy.plot.plot(sts[10],phase_list=t+b,model=model_10)
+b,t,ba,ta = find_reverb_times(sts[10],670,model_10)
+seispy.plot.plot(sts[10],phase_list=['ScS^660ScSScS','sScS^660ScSScS'],model=model_10)
+#b,t,ba,ta = find_reverb_times(sts[10],410,model_10)
+#seispy.plot.plot(sts[10],phase_list=['ScSScS'],model=model_10)
 #for idx, tr in enumerate(sts):
 #     mtr = strip_reverb(tr)
 #     mtr = align_synth_data(std[idx],mtr)
