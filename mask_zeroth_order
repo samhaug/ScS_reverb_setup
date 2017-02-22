@@ -15,7 +15,39 @@ Mask all but zeroth order reverb from synthetic. Subtract from data.
 Save higher order reverberations of data
 '''
 
-def strip_reverb(tr):
+def find_reverb_times(tr,depth,model):
+    '''
+    Find traveltimes for top and bottomside reverberations at arbitrary depth.
+    '''
+
+    evdp = tr.stats.sac['evdp']
+    gcarc = tr.stats.sac['gcarc']
+    d = str(depth)
+    bottomside = ['ScSScS',
+                  'ScS^'+d+'ScSScS',
+                  'sScS^'+d+'ScSScS',
+                  'ScS^'+d+'ScSScSScS',
+                  'sScS^'+d+'ScSScSScS']
+
+    topside = ['ScSScS',
+               'ScSSv'+d+'SScS',
+               'sScSSv'+d+'SScS',
+               'ScSSv'+d+'SScSScS',
+               'sScSSv'+d+'SScSScS',
+               'ScSSv'+d+'SScSScSScS',
+               'sScSSv'+d+'SScSScSScS']
+
+    bottomside_arr = model.get_travel_times(source_depth_in_km=evdp,
+                                   distance_in_degree=gcarc,
+                                   phase_list = bottomside)
+
+    topside_arr = model.get_travel_times(source_depth_in_km=evdp,
+                               distance_in_degree=gcarc,
+                               phase_list = topside)
+
+    return bottomside_arr,topside_arr
+
+def strip_reverb(tr,depth,model):
     '''
     Use a tukey window to mask an axisem
     trace and only pass the reverberations
@@ -23,14 +55,30 @@ def strip_reverb(tr):
     sr = tr.stats.sampling_rate
     npts = tr.stats.npts
     masked_trace = tr.copy()
+    b,t = find_reverb_times(tr,depth,model)
+    print b
 
-    t1 = tukey(185,0.2)
-    m1 = np.hstack((np.zeros(30),t1,np.zeros(npts-(30+185))))
-    t2 = tukey(175,0.2)
-    m2 = np.hstack((np.zeros(945),t2,np.zeros(npts-(945+175))))
-    t3 = tukey(160,0.2)
-    m3 = np.hstack((np.zeros(1888),t3,np.zeros(npts-(1888+160))))
-    masked_trace.data = tr.data*(m1+m2+m3)
+    # Strip first bottom 660
+    t1 = tukey(int(b[2].time-b[1].time+80),0.2)
+    left = np.zeros(int(b[1].time-b[0].time+30))
+    m1 = np.hstack((left,t1,np.zeros(npts-len(left)-len(t1))))
+
+    # Strip second bottom 660
+    t2 = tukey(int(b[4].time-b[3].time+80),0.2)
+    left = np.zeros(int(b[3].time-b[0].time+30))
+    m2 = np.hstack((left,t2,np.zeros(npts-len(left)-len(t2))))
+
+    # Strip first top 660
+    t3 = tukey(int(t[2].time-t[1].time+80),0.2)
+    left = np.zeros(int(t[1].time-t[0].time+30))
+    m3 = np.hstack((left,t3,np.zeros(npts-len(left)-len(t3))))
+
+    # Strip second top 660
+    t4 = tukey(int(t[4].time-t[3].time+80),0.2)
+    left = np.zeros(int(t[3].time-t[0].time+30))
+    m4 = np.hstack((left,t4,np.zeros(npts-len(left)-len(t4))))
+
+    masked_trace.data = tr.data*(m1+m2+m3+m4)
 
     return masked_trace
 
@@ -78,23 +126,31 @@ def align_synth_data(trd,trs):
 
 data_dir = '/home/samhaug/work1/ScS_reverb_data/20160130/'
 syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/'
-model = TauPyModel(model='prem_3.0')
+model = TauPyModel(model='prem_3.0_10')
 
 std = data_setup(data_dir)
 sts = synth_setup(syn_dir,std)
 st_mask = sts.copy()
 
-for idx, tr in enumerate(sts):
-     mtr = strip_reverb(tr)
-     mtr = align_synth_data(std[idx],mtr)
-     plt.plot(std[idx].data,alpha=0.5)
-     plt.plot(mtr.data,alpha=0.5)
-     plt.show()
-     st_mask[idx].data = std[idx].data-mtr.data
+#for idx, tr in enumerate(sts):
+#     mtr = strip_reverb(tr)
+#     mtr = align_synth_data(std[idx],mtr)
+#     plt.plot(std[idx].data,alpha=0.5)
+#     plt.plot(mtr.data,alpha=0.5)
+#     plt.show()
+#     st_mask[idx].data = std[idx].data-mtr.data
 
-st_mask.write(data_dir+'FJ_mask.pk',format='PICKLE')
+#st_mask.write(data_dir+'FJ_mask.pk',format='PICKLE')
+#st_mask.write('FJ_mask.pk',format='PICKLE')
 
 
+#b,t = find_reverb_times(sts[10],660,model)
+#seispy.plot.plot(sts[10],phase_list=b)
+m = strip_reverb(sts[10],660,model)
+plt.plot(m.data,alpha=0.5)
+plt.plot(sts[10].data,alpha=0.5)
+plt.show()
+#seispy.plot.plot(m)
 
 
 
