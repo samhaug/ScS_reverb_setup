@@ -11,8 +11,8 @@ from os import listdir
 from scipy.signal import correlate
 
 '''
-Mask all but zeroth order reverb from synthetic. Subtract from data.
-Save higher order reverberations of data
+Make greens functions for higher order reverberations by shifting the 660
+km reverberation traveltimes.
 '''
 
 def find_reverb_times(tr,depth,model):
@@ -23,7 +23,10 @@ def find_reverb_times(tr,depth,model):
     evdp = tr.stats.sac['evdp']
     gcarc = tr.stats.sac['gcarc']
     d = str(depth)
+
     bottomside = ['ScSScS',
+                  'ScS^'+d+'ScS',
+                  'sScS^'+d+'ScS',
                   'ScS^'+d+'ScSScS',
                   'sScS^'+d+'ScSScS',
                   'ScS^'+d+'ScSScSScS',
@@ -42,8 +45,8 @@ def find_reverb_times(tr,depth,model):
                                    phase_list = bottomside)
 
     topside_arr = model.get_travel_times(source_depth_in_km=evdp,
-                               distance_in_degree=gcarc,
-                               phase_list = topside)
+                                   distance_in_degree=gcarc,
+                                   phase_list = topside)
 
     return bottomside_arr,topside_arr
 
@@ -56,33 +59,50 @@ def strip_reverb(tr,depth,model):
     npts = tr.stats.npts
     masked_trace = tr.copy()
     b,t = find_reverb_times(tr,depth,model)
-    print b
+    o = tr.stats.sac['o']
 
     # Strip first bottom 660
-    t1 = tukey(int(b[2].time-b[1].time+90),0.2)
-    left = np.zeros(int(b[1].time-b[0].time+30))
-    m1 = np.hstack((left,t1,np.zeros(npts-len(left)-len(t1))))
+    t1 = tukey(150,0.2)
+    left = np.zeros(int(b[1].time+o)-100)
+    right = np.zeros(npts-len(left)-len(t1))
+    m1b = np.hstack((left,t1,right))
 
     # Strip second bottom 660
-    t2 = tukey(int(b[4].time-b[3].time+90),0.2)
-    left = np.zeros(int(b[3].time-b[0].time+30))
-    m2 = np.hstack((left,t2,np.zeros(npts-len(left)-len(t2))))
+    t2 = tukey(150,0.2)
+    left = np.zeros(int(b[3].time+o-20))
+    right = np.zeros(npts-len(left)-len(t2))
+    m2b = np.hstack((left,t2,right))
+
+    # Strip second bottom 660
+    t2 = tukey(150,0.2)
+    left = np.zeros(int(b[5].time+o-20))
+    right = np.zeros(npts-len(left)-len(t2))
+    m3b = np.hstack((left,t2,right))
 
     # Strip first top 660
-    t3 = tukey(int(t[2].time-t[1].time+80),0.2)
-    left = np.zeros(int(t[1].time-t[0].time+30))
-    m3 = np.hstack((left,t3,np.zeros(npts-len(left)-len(t3))))
+    t3 = tukey(150,0.2)
+    left = np.zeros(int(t[1].time+o-20))
+    right = np.zeros(npts-len(left)-len(t3))
+    m1t = np.hstack((left,t3,right))
 
     # Strip second top 660
-    t4 = tukey(int(t[4].time-t[3].time+80),0.2)
-    left = np.zeros(int(t[3].time-t[0].time+30))
-    m4 = np.hstack((left,t4,np.zeros(npts-len(left)-len(t4))))
+    t4 = tukey(150,0.2)
+    left = np.zeros(int(t[3].time+o-20))
+    right = np.zeros(npts-len(left)-len(t4))
+    m2t = np.hstack((left,t4,right))
 
-    masked_trace.data = tr.data*(m1+m2+m3+m4)
 
-    return masked_trace
+    plt.plot(m1b*tr.data,alpha=0.5)
+    plt.plot(m2b*tr.data,alpha=0.5)
+    plt.plot(m3b*tr.data,alpha=0.5)
+    plt.plot(m1t*tr.data,alpha=0.5)
+    plt.plot(m2t*tr.data,alpha=0.5)
+    plt.plot(tr.data,alpha=0.5,color='k')
+    plt.show()
+    return b,t,[m1b*tr.data,m2b*tr.data,m1t*tr.data,m2t*tr.data]
 
 def data_setup(data_dir):
+    start_time = -400
     print('data_setup')
     st_data = obspy.read(data_dir+'FJ_clean.pk')
     st_data = seispy.data.normalize_on_envelope(st_data,phase=['ScSScS'])
@@ -90,14 +110,17 @@ def data_setup(data_dir):
         st_data[idx].stats.location = st_data[idx].stats.sac['gcarc']
         o = tr.stats.sac['o']
         starttime = tr.stats.starttime
-        st_data[idx] = seispy.data.phase_window(tr,['ScSScS'],window=(-50,2050))
+        st_data[idx] = seispy.data.phase_window(tr,['ScSScS'],window=(start_time,2050))
         st_data[idx].data += -1*st_data[idx].data.mean()
     st_data.interpolate(1)
     st_data = seispy.data.align_on_phase(st_data,phase=['ScSScS'],a_min=False)
+    for idx,tr in enumerate(st_data):
+        st_data[idx].stats.sac['o'] += -1*start_time
     st_data.sort(['location'])
     return st_data
 
 def synth_setup(syn_dir,st_data):
+    start_time = -400
     print('synth_setup')
     st_syn = obspy.read(syn_dir+'st_T.pk')
     st_syn.filter('bandpass',freqmax=1/25.,freqmin=1/60.)
@@ -106,12 +129,14 @@ def synth_setup(syn_dir,st_data):
     st_syn = seispy.data.align_on_phase(st_syn,phase=['ScSScS'],a_min=False)
     for idx,tr in enumerate(st_syn):
         st_syn[idx].stats.location = st_syn[idx].stats.sac['gcarc']
-        st_syn[idx] = seispy.data.phase_window(tr,['ScSScS'],window=(-50,2050))
+        st_syn[idx] = seispy.data.phase_window(tr,['ScSScS'],window=(start_time,2050))
         st_syn[idx].stats.starttime = st_data[idx].stats.starttime
         st_syn[idx].data += -1*st_syn[idx].data.mean()
         st_syn[idx].stats.sac['gcarc'] = st_data[idx].stats.sac['gcarc']
     st_syn.interpolate(1)
     st_syn = seispy.data.align_on_phase(st_syn,phase=['ScSScS'],a_min=False)
+    for idx,tr in enumerate(st_syn):
+        st_syn[idx].stats.sac['o'] += -1*start_time
     st_syn.sort(['location'])
     return st_syn
 
@@ -124,33 +149,36 @@ def align_synth_data(trd,trs):
     trs.data = np.roll(trs.data,shift)
     return trs
 
+def shift_greens(m1b,m2b,m1t,m2t,b660,t660,tr,depth,model):
+    '''
+    shift 660 reverb greens functions based on traveltime of
+    specified depth reverberations.
+    '''
+    b660,t660 = find_reverb_times(tr,660,model)
+    b,t = find_reverb_times(tr,depth,model)
+    rm1b = np.roll(m1b,int(b[1].time-b660[1].time))
+    rm2b = np.roll(m2b,int(b[3].time-b660[3].time))
+    rm1t = np.roll(m1t,int(t[1].time-b660[1].time))
+    rm2t = np.roll(m2t,int(t[3].time-b660[3].time))
+    plt.plot(m1t+m2t,alpha=0.5)
+    plt.plot(rm1t+rm2t,alpha=0.5)
+    plt.show()
+
+
 data_dir = '/home/samhaug/work1/ScS_reverb_data/20160130/'
 syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/'
 model = TauPyModel(model='prem_3.0_10')
 
 std = data_setup(data_dir)
 sts = synth_setup(syn_dir,std)
-st_mask = sts.copy()
+#seispy.plot.plot(sts[10],phase_list=['ScS^660ScS'])
 
-#for idx, tr in enumerate(sts):
-#     mtr = strip_reverb(tr)
-#     mtr = align_synth_data(std[idx],mtr)
-#     plt.plot(std[idx].data,alpha=0.5)
-#     plt.plot(mtr.data,alpha=0.5)
-#     plt.show()
-#     st_mask[idx].data = std[idx].data-mtr.data
+b660, t660, g  = strip_reverb(sts[10],660,model)
 
-#st_mask.write(data_dir+'FJ_mask.pk',format='PICKLE')
-#st_mask.write('FJ_mask.pk',format='PICKLE')
-
-
-#b,t = find_reverb_times(sts[10],660,model)
-#seispy.plot.plot(sts[10],phase_list=b)
-m = strip_reverb(sts[10],660,model)
-plt.plot(m.data,alpha=0.5)
-plt.plot(sts[10].data,alpha=0.5)
+m1b660,m2b660,m1t660,m2t660 = g[0],g[1],g[2],g[3]
+plt.plot(m1b660+m2b660+m1t660+m2t660,alpha=0.5)
 plt.show()
-#seispy.plot.plot(m)
+#shift_greens(m1b660,m2b660,m1t660,m2t660,b660,t660,sts[10],500,model)
 
 
 
