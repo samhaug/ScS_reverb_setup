@@ -23,14 +23,14 @@ def find_reverb_times(tr,depth,model):
     evdp = tr.stats.sac['evdp']
     gcarc = tr.stats.sac['gcarc']
     d = str(depth)
-    bottomside = ['ScS^'+d+'ScS',
-                  'sScS^'+d+'ScS',
+    bottomside = ['ScSScS',
                   'ScS^'+d+'ScSScS',
                   'sScS^'+d+'ScSScS',
                   'ScS^'+d+'ScSScSScS',
                   'sScS^'+d+'ScSScSScS']
 
-    topside = ['ScSSv'+d+'SScS',
+    topside = ['ScSScS',
+               'ScSSv'+d+'SScS',
                'sScSSv'+d+'SScS',
                'ScSSv'+d+'SScSScS',
                'sScSSv'+d+'SScSScS',
@@ -45,9 +45,9 @@ def find_reverb_times(tr,depth,model):
                                distance_in_degree=gcarc,
                                phase_list = topside)
 
-    return bottomside,topside,bottomside_arr, topside_arr
+    return bottomside_arr,topside_arr
 
-def strip_reverb(tr):
+def strip_reverb(tr,depth,model):
     '''
     Use a tukey window to mask an axisem
     trace and only pass the reverberations
@@ -55,16 +55,47 @@ def strip_reverb(tr):
     sr = tr.stats.sampling_rate
     npts = tr.stats.npts
     masked_trace = tr.copy()
+    b,t = find_reverb_times(tr,depth,model)
+    print b
 
-    t1 = tukey(185,0.2)
-    m1 = np.hstack((np.zeros(30),t1,np.zeros(npts-(30+185))))
-    t2 = tukey(175,0.2)
-    m2 = np.hstack((np.zeros(945),t2,np.zeros(npts-(945+175))))
-    t3 = tukey(160,0.2)
-    m3 = np.hstack((np.zeros(1888),t3,np.zeros(npts-(1888+160))))
-    masked_trace.data = tr.data*(m1+m2+m3)
+    # Strip first bottom 660
+    t1 = tukey(int(b[2].time-b[1].time+90),0.2)
+    left = np.zeros(int(b[1].time-b[0].time+30))
+    m1 = np.hstack((left,t1,np.zeros(npts-len(left)-len(t1))))
+
+    # Strip second bottom 660
+    t2 = tukey(int(b[4].time-b[3].time+90),0.2)
+    left = np.zeros(int(b[3].time-b[0].time+30))
+    m2 = np.hstack((left,t2,np.zeros(npts-len(left)-len(t2))))
+
+    # Strip first top 660
+    t3 = tukey(int(t[2].time-t[1].time+80),0.2)
+    left = np.zeros(int(t[1].time-t[0].time+30))
+    m3 = np.hstack((left,t3,np.zeros(npts-len(left)-len(t3))))
+
+    # Strip second top 660
+    t4 = tukey(int(t[4].time-t[3].time+80),0.2)
+    left = np.zeros(int(t[3].time-t[0].time+30))
+    m4 = np.hstack((left,t4,np.zeros(npts-len(left)-len(t4))))
+
+    masked_trace.data = tr.data*(m1+m2+m3+m4)
 
     return masked_trace
+
+def data_setup(data_dir):
+    print('data_setup')
+    st_data = obspy.read(data_dir+'FJ_clean.pk')
+    st_data = seispy.data.normalize_on_envelope(st_data,phase=['ScSScS'])
+    for idx,tr in enumerate(st_data):
+        st_data[idx].stats.location = st_data[idx].stats.sac['gcarc']
+        o = tr.stats.sac['o']
+        starttime = tr.stats.starttime
+        st_data[idx] = seispy.data.phase_window(tr,['ScSScS'],window=(-50,2050))
+        st_data[idx].data += -1*st_data[idx].data.mean()
+    st_data.interpolate(1)
+    st_data = seispy.data.align_on_phase(st_data,phase=['ScSScS'],a_min=False)
+    st_data.sort(['location'])
+    return st_data
 
 def synth_setup(syn_dir,st_data):
     print('synth_setup')
@@ -84,21 +115,6 @@ def synth_setup(syn_dir,st_data):
     st_syn.sort(['location'])
     return st_syn
 
-def data_setup(data_dir):
-    print('data_setup')
-    st_data = obspy.read(data_dir+'FJ_clean.pk')
-    st_data = seispy.data.normalize_on_envelope(st_data,phase=['ScSScS'])
-    for idx,tr in enumerate(st_data):
-        st_data[idx].stats.location = st_data[idx].stats.sac['gcarc']
-        o = tr.stats.sac['o']
-        starttime = tr.stats.starttime
-        st_data[idx] = seispy.data.phase_window(tr,['ScSScS'],window=(-50,2050))
-        st_data[idx].data += -1*st_data[idx].data.mean()
-    st_data.interpolate(1)
-    st_data = seispy.data.align_on_phase(st_data,phase=['ScSScS'],a_min=False)
-    st_data.sort(['location'])
-    return st_data
-
 def align_synth_data(trd,trs):
     '''
     Align a synthetic with data based on max correlation.
@@ -109,34 +125,32 @@ def align_synth_data(trd,trs):
     return trs
 
 data_dir = '/home/samhaug/work1/ScS_reverb_data/20160130/'
-syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0/FJ_3.0_h6/'
-#syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/prem_FJ_okhotsk/'
-sts = obspy.read(syn_dir+'st_T.pk')
-sts.filter('bandpass',freqmin=1/60.,freqmax=1/25.)
-sts.integrate().normalize()
-model_10 = TauPyModel(model='prem_3.0_10')
+syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/'
+model = TauPyModel(model='prem_3.0_10')
 
-std = obspy.read(data_dir+'FJ_clean.pk')
-#std = data_setup(data_dir)
-#sts = synth_setup(syn_dir,std)
+std = data_setup(data_dir)
+sts = synth_setup(syn_dir,std)
+st_mask = sts.copy()
 
-
-b,t,ba,ta = find_reverb_times(sts[10],660,model_10)
-seispy.plot.plot(sts[10],phase_list=t,model=model_10)
-b,t,ba,ta = find_reverb_times(sts[10],410,model_10)
-seispy.plot.plot(sts[10],phase_list=t,model=model_10)
-#seispy.plot.plot(sts[10],phase_list=['ScS^660ScSScS','sScS^660ScSScS'],model=model_10)
-#b,t,ba,ta = find_reverb_times(sts[10],410,model_10)
-#seispy.plot.plot(sts[10],phase_list=['ScSScS'],model=model_10)
 #for idx, tr in enumerate(sts):
 #     mtr = strip_reverb(tr)
 #     mtr = align_synth_data(std[idx],mtr)
+#     plt.plot(std[idx].data,alpha=0.5)
+#     plt.plot(mtr.data,alpha=0.5)
+#     plt.show()
 #     st_mask[idx].data = std[idx].data-mtr.data
-#     #plt.plot(std[idx].data-mtr.data)
-     #plt.show()
-#st_mask.write('mask.pk',format='PICKLE')
+
+#st_mask.write(data_dir+'FJ_mask.pk',format='PICKLE')
+#st_mask.write('FJ_mask.pk',format='PICKLE')
 
 
+#b,t = find_reverb_times(sts[10],660,model)
+#seispy.plot.plot(sts[10],phase_list=b)
+m = strip_reverb(sts[10],660,model)
+plt.plot(m.data,alpha=0.5)
+plt.plot(sts[10].data,alpha=0.5)
+plt.show()
+#seispy.plot.plot(m)
 
 
 
