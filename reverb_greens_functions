@@ -1,5 +1,6 @@
 #!/home/samhaug/anaconda2/bin/python
 
+import h5py
 import obspy
 import numpy as np
 import seispy
@@ -99,7 +100,7 @@ def strip_reverb(tr,depth,model):
     plt.plot(m2t*tr.data,alpha=0.5)
     plt.plot(tr.data,alpha=0.5,color='k')
     plt.show()
-    return b,t,[m1b*tr.data,m2b*tr.data,m1t*tr.data,m2t*tr.data]
+    return b,t,[m1b*tr.data,m2b*tr.data,m3b*tr.data,m1t*tr.data,m2t*tr.data]
 
 def data_setup(data_dir):
     start_time = -400
@@ -149,20 +150,26 @@ def align_synth_data(trd,trs):
     trs.data = np.roll(trs.data,shift)
     return trs
 
-def shift_greens(m1b,m2b,m1t,m2t,b660,t660,tr,depth,model):
+def shift_greens(m1b,m2b,m3b,m1t,m2t,b660,t660,tr,depth,model):
     '''
     shift 660 reverb greens functions based on traveltime of
     specified depth reverberations.
     '''
     b660,t660 = find_reverb_times(tr,660,model)
     b,t = find_reverb_times(tr,depth,model)
-    rm1b = np.roll(m1b,int(b[1].time-b660[1].time))
-    rm2b = np.roll(m2b,int(b[3].time-b660[3].time))
-    rm1t = np.roll(m1t,int(t[1].time-b660[1].time))
-    rm2t = np.roll(m2t,int(t[3].time-b660[3].time))
-    plt.plot(m1t+m2t,alpha=0.5)
-    plt.plot(rm1t+rm2t,alpha=0.5)
-    plt.show()
+    rm1b = seispy.data.roll_zero(m1b,int(b[1].time-b660[1].time))
+    rm2b = seispy.data.roll_zero(m2b,int(b[3].time-b660[3].time))
+    rm3b = seispy.data.roll_zero(m3b,int(b[5].time-b660[5].time))
+    rm1t = seispy.data.roll_zero(m1t,int(t[1].time-t660[1].time))
+    rm2t = seispy.data.roll_zero(m2t,int(t[3].time-t660[3].time))
+
+    #plt.plot(m1b+m2b+m3b+m1t+m2t,alpha=0.5,color='b')
+    #plt.plot(rm1b+rm2b+rm3b+rm1t+rm2t,alpha=0.5,color='r')
+    #plt.plot(m1t+m2t,alpha=0.5,color='b')
+    #plt.plot(rm1t+rm2t,alpha=0.5,color='r')
+    #plt.show()
+
+    return rm1b+rm2b+rm3b+rm1t+rm2t
 
 
 data_dir = '/home/samhaug/work1/ScS_reverb_data/20160130/'
@@ -175,10 +182,32 @@ sts = synth_setup(syn_dir,std)
 
 b660, t660, g  = strip_reverb(sts[10],660,model)
 
-m1b660,m2b660,m1t660,m2t660 = g[0],g[1],g[2],g[3]
-plt.plot(m1b660+m2b660+m1t660+m2t660,alpha=0.5)
-plt.show()
-#shift_greens(m1b660,m2b660,m1t660,m2t660,b660,t660,sts[10],500,model)
+#plt.plot(g[0]+g[1]+g[2]+g[3]+g[4])
+
+#3plt.plot(m1b660+m2b660+m1t660+m2t660,alpha=0.5)
+#plt.show()
+#shift_greens(g[0],g[1],g[2],g[3],g[4],b660,t660,sts[10],500,model)
+#shift_greens(g[0],g[1],g[2],g[3],g[4],b660,t660,sts[10],400,model)
+#shift_greens(g[0],g[1],g[2],g[3],g[4],b660,t660,sts[10],200,model)
+
+'''
+h5 = h5py.File('/home/samhaug/work1/ScS_reverb_sims/gf_reverb/FJ_20160130.h5','w')
+
+for ii in np.arange(100,1000,100):
+    print('writing '+str(ii))
+    gf = shift_greens(g[0],g[1],g[2],g[3],g[4],b660,t660,sts[10],ii,model)
+    h5.create_dataset(str(ii),data=gf)
+
+h5.close()
+
+
+
+
+
+'''
+
+
+
 
 
 
