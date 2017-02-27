@@ -1,0 +1,111 @@
+#!/home/samhaug/anaconda2/bin/python
+
+import obspy
+import numpy as np
+import h5py
+from obspy.taup import TauPyModel
+from scipy.interpolate import interp1d
+
+'''
+Make lookup tables for first order ScS reverberations.
+
+Read a stream object, and make a lookup table for each station in the stream.
+The lookup table is stored as an hdf5 file. The format for the hdf5 file is:
+
+f['Station/reverb'][...]
+
+Where 'Station' is the name of the station, 'reverb' identifies the
+reverberation, i.e. 'bScS3' would be a bottomside reverberation for ScS3.
+'tScS4' would be topside reverb for ScS4. Each dataset has two columns, depth
+and time.
+'''
+
+def main():
+    model = TauPyModel(model='prem_3.0_10')
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_data/20160130/'+'FJ_clean.pk')
+    f = setup_h5('20160130',st[0].stats.network)
+    for tr in st:
+        find_reverb_times(tr,model,f)
+
+def setup_h5(event_name,network_name):
+    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/'+network_name+'_'+event_name+'.h5','w')
+    return f
+
+def interp_reverb(reverb_array):
+    f = interp1d(reverb_array[:,0],reverb_array[:,1])
+    r_new = np.linspace(reverb_array[:,0].min(),reverb_array[:,0].max(),3000)
+    new_t = f(r_new)
+    return np.hstack((np.transpose([r_new]),np.transpose([new_t])))
+
+def find_reverb_times(tr,model,h5file):
+    '''
+    Find traveltimes for top and bottomside reverberations at arbitrary depth.
+    '''
+    print('reverb times: '+tr.stats.station)
+
+    evdp = tr.stats.sac['evdp']
+    gcarc = tr.stats.sac['gcarc']
+    stat = tr.stats.station
+
+    ScS2 = []
+    bScS2 = []
+    bScS3 = []
+    bScS4 = []
+    bScS5 = []
+
+    tScS2 = []
+    tScS3 = []
+    tScS4 = []
+    tScS5 = []
+
+    for d in np.arange(20,2870,50):
+
+        ds = str(d)
+        bottomside = [
+                      'ScS^'+ds+'ScS',
+                      'ScS^'+ds+'ScSScS',
+                      'ScS^'+ds+'ScSScSScS',
+                      'ScS^'+ds+'ScSScSScS']
+
+        topside =    [
+                      'ScSSv'+ds+'SScS',
+                      'ScSSv'+ds+'SScSScS',
+                      'ScSSv'+ds+'SScSScSScS',
+                      'ScSSv'+ds+'SScSScSScSScS']
+
+        ba = model.get_travel_times(source_depth_in_km=evdp,
+                                             distance_in_degree=gcarc,
+                                             phase_list = bottomside)
+        ta = model.get_travel_times(source_depth_in_km=evdp,
+                                             distance_in_degree=gcarc,
+                                             phase_list = topside)
+        ScS2_p = model.get_travel_times(source_depth_in_km=evdp,
+                                             distance_in_degree=gcarc,
+                                             phase_list = ['ScSScS'])
+
+
+        ScS2.append([d,ScS2_p[0].time])
+        bScS2.append([d,ba[0].time])
+        bScS3.append([d,ba[1].time])
+        bScS4.append([d,ba[2].time])
+        bScS5.append([d,ba[3].time])
+
+        tScS2.append([d,ta[0].time])
+        tScS3.append([d,ta[1].time])
+        tScS4.append([d,ta[2].time])
+        tScS5.append([d,ta[3].time])
+
+    h5file.create_dataset(stat+'/ScS2',data=interp_reverb(np.array(ScS2)))
+    h5file.create_dataset(stat+'/bScS2',data=interp_reverb(np.array(bScS2)))
+    h5file.create_dataset(stat+'/bScS3',data=interp_reverb(np.array(bScS3)))
+    h5file.create_dataset(stat+'/bScS4',data=interp_reverb(np.array(bScS4)))
+    h5file.create_dataset(stat+'/bScS5',data=interp_reverb(np.array(bScS5)))
+
+    h5file.create_dataset(stat+'/tScS2',data=interp_reverb(np.array(tScS2)))
+    h5file.create_dataset(stat+'/tScS3',data=interp_reverb(np.array(tScS3)))
+    h5file.create_dataset(stat+'/tScS4',data=interp_reverb(np.array(tScS4)))
+    h5file.create_dataset(stat+'/tScS5',data=interp_reverb(np.array(tScS5)))
+
+main()
+
+
