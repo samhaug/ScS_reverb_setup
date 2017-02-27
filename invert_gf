@@ -17,7 +17,7 @@ format.
 def data_setup(data_dir):
     start_time = -400
     print('data_setup')
-    st_data = obspy.read(data_dir+'FJ_mask.pk')
+    st_data = obspy.read(data_dir+'FJ_mask_zero.pk')
     st_data = seispy.data.normalize_on_envelope(st_data,phase=['ScSScS'])
     for idx,tr in enumerate(st_data):
         st_data[idx].stats.location = st_data[idx].stats.sac['gcarc']
@@ -53,19 +53,19 @@ f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/gf_reverb/FJ_20160130.h5','r'
 l,names = G_setup(f)
 G = l.T
 st = data_setup(data_dir)
-d = np.transpose([st[10].data])
 
-print d.shape,G.shape
-m = scipy.linalg.lstsq(G,d)
+for idx,tr in enumerate(st):
+    d = np.transpose([tr.data])
 
-plt.scatter(names,m[0])
-plt.plot(names,m[0])
-plt.show()
-plt.plot(np.dot(G,m[0]),color='r',alpha=0.5)
-plt.plot(st[10].data,color='k',alpha=0.5)
-plt.show()
-#plt.imshow(l,aspect='auto')
-#plt.show()
+    G = G[0:len(d),:]
+    m = scipy.linalg.lstsq(G,d)
+
+    plt.scatter(names,m[0])
+    plt.plot(names,m[0])
+    plt.show()
+    plt.plot(np.dot(G,m[0]),color='r',alpha=0.5)
+    plt.plot(st[idx].data,color='k',alpha=0.5)
+    plt.show()
 
 
 

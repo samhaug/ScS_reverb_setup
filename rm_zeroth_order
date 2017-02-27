@@ -11,8 +11,8 @@ from os import listdir
 from scipy.signal import correlate
 
 '''
-Mask all but zeroth order reverb from synthetic. Subtract from data.
-Save higher order reverberations of data
+Zero out all zeroth order reverberations from data. Leave a hole in the data
+where they used to be.
 '''
 
 def find_reverb_times(tr,model):
@@ -59,9 +59,10 @@ def strip_reverb(tr,model):
     left = np.zeros(int(b[2].time+o-20))
     m3 = np.hstack((left,t3,np.zeros(npts-len(left)-len(t3))))
 
-    masked_trace.data = tr.data*(m1+m2+m3)
+    #masked_trace.data = tr.data*(m1+m2+m3)
+    mask = m1+m2+m3
 
-    return masked_trace
+    return mask
 
 def data_setup(data_dir):
     start_time = -400
@@ -121,10 +122,11 @@ st_mask = sts.copy()
 
 for idx, tr in enumerate(sts):
     m = strip_reverb(sts[idx],model)
-    m = align_synth_data(std[idx],m)
-    st_mask[idx].data = std[idx].data-m.data
+    std[idx].data *= 1-m
 
-st_mask.write(data_dir+'FJ_mask.pk',format='PICKLE')
+
+
+std.write(data_dir+'FJ_mask_zero.pk',format='PICKLE')
 
 
 

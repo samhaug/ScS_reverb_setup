@@ -192,7 +192,7 @@ b660, t660, g  = strip_reverb(sts[10],660,model)
 
 h5 = h5py.File('/home/samhaug/work1/ScS_reverb_sims/gf_reverb/FJ_20160130.h5','w')
 
-for ii in np.arange(100,1200,50):
+for ii in np.arange(100,900,25):
     print('writing '+str(ii))
     gf = shift_greens(g[0],g[1],g[2],g[3],g[4],b660,t660,sts[10],ii,model)
     h5.create_dataset(str(ii),data=gf)
