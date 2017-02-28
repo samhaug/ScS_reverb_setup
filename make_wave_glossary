@@ -1,0 +1,80 @@
+#!/home/samhaug/anaconda2/bin/python
+
+import numpy as np
+import obspy
+import h5py
+import seispy
+from obspy.taup import TauPyModel
+
+'''
+Make glossary of reverberation waveforms to be used in migration.
+
+Have the option of shifting all traces to align phase better.
+
+Makes an h5py file with waveforms from 660 reverberations. Naming scheme:
+tScS3 is a topside 660 reverberation for ScS3.
+'''
+
+def main():
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/st_T.pk')
+    st.filter('bandpass',freqmin=1/60.,freqmax=1/25.)
+    st.integrate().normalize()
+    #st = shift_stream(st,0)
+
+    net = 'FJ'
+    ev = '20160130'
+    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/'+net+'_'+ev+'.h5','w')
+
+    make_glossary(st[0],f)
+    f.close()
+
+def shift_stream(st,shift):
+    '''
+    Experiment with best temporal offset
+    '''
+
+    for idx,tr in enumerate(st):
+        st[idx].data = np.roll(tr.data,shift)
+    seispy.plot.simple_section(st,a_list=['S'])
+    return st
+
+def make_glossary(tr,h5file):
+
+    model = TauPyModel(model='prem_3.0_10')
+
+    def strip_phase(tr,phase):
+        a = seispy.data.phase_window(tr,phase,window=(0,170),model='prem_3.0_10')
+        return a.data
+
+    t = ['ScSSv660SScS',
+         'ScSSv660SScSScS',
+         'ScSSv660SScSScSScS',
+         'ScSSv660SScSScSScSScS']
+
+    b = ['ScS^660ScS',
+         'ScS^660ScSScS',
+         'ScS^660ScSScSScS',
+         'ScS^660ScSScSScSScS']
+
+    #seispy.plot.plot(tr,phase_list=t+b,model=model)
+
+    h5file.create_dataset('tScS2',data=strip_phase(tr,[t[0]]))
+    h5file.create_dataset('tScS3',data=strip_phase(tr,[t[1]]))
+    h5file.create_dataset('tScS4',data=strip_phase(tr,[t[2]]))
+    h5file.create_dataset('tScS5',data=strip_phase(tr,[t[3]]))
+
+    h5file.create_dataset('bScS2',data=strip_phase(tr,[b[0]]))
+    h5file.create_dataset('bScS3',data=strip_phase(tr,[b[1]]))
+    h5file.create_dataset('bScS4',data=strip_phase(tr,[b[2]]))
+    h5file.create_dataset('bScS5',data=strip_phase(tr,[b[3]]))
+
+main()
+
+
+
+
+
+
+
+
+
