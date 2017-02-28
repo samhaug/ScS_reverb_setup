@@ -10,6 +10,15 @@ the 220km discont. The perturbation shifts S wave velocity above the 220 by any
 factor you choose. The model is written to be used for mineos.
 
 perturb_depth makes mineos source files that have different depths. This
-is to explore the effect of source depth on depth phase separation
+is to explore the effect of source depth on depth phase separation.
+
+dip_perturb_mineos makes source files with perturbations to dip. This is to 
+better match ScSn and sScSn waveform amplitudes.
+
+make_lookup_table makes an HDF5 file with lookup values for ScS reverberation
+traveltimes.
+
+make_wave_glossary makes an HDF5 file with first order reverberation waveforms
+included.
 
 Soon to be greens function source generator
