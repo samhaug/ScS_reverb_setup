@@ -45,17 +45,17 @@ def strip_reverb(tr,model):
     o = tr.stats.sac['o']
 
     # Strip ScS_2
-    t1 = tukey(150,0.2)
+    t1 = tukey(200,0.2)
     left = np.zeros(int(b[0].time+o-20))
     m1 = np.hstack((left,t1,np.zeros(npts-len(t1)-len(left))))
 
     # Strip ScS_3
-    t2 = tukey(150,0.2)
+    t2 = tukey(200,0.2)
     left = np.zeros(int(b[1].time+o-20))
     m2 = np.hstack((left,t2,np.zeros(npts-len(left)-len(t2))))
 
     # Strip ScS_3
-    t3 = tukey(150,0.2)
+    t3 = tukey(200,0.2)
     left = np.zeros(int(b[2].time+o-20))
     m3 = np.hstack((left,t3,np.zeros(npts-len(left)-len(t3))))
 
@@ -67,7 +67,7 @@ def strip_reverb(tr,model):
 def data_setup(data_dir):
     start_time = -400
     print('data_setup')
-    st_data = obspy.read(data_dir+'FJ_clean.pk')
+    st_data = obspy.read(data_dir+'FJ_stack.pk')
     st_data = seispy.data.normalize_on_envelope(st_data,phase=['ScSScS'])
     for idx,tr in enumerate(st_data):
         st_data[idx].stats.location = st_data[idx].stats.sac['gcarc']
@@ -117,16 +117,18 @@ syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/'
 model = TauPyModel(model='prem_3.0_10')
 
 std = data_setup(data_dir)
-sts = synth_setup(syn_dir,std)
-st_mask = sts.copy()
+#sts = synth_setup(syn_dir,std)
+#st_mask = sts.copy()
 
-for idx, tr in enumerate(sts):
-    m = strip_reverb(sts[idx],model)
+for idx, tr in enumerate(std):
+    m = strip_reverb(std[idx],model)
     std[idx].data *= 1-m
+    seispy.plot(std[0])
+    plt.show()
 
 
+#sts.write('/home/samhaug/work1/ScS_reverb_sims/mineos/synth_test.pk',format='PICKLE')
 
-std.write(data_dir+'FJ_mask_zero.pk',format='PICKLE')
 
 
 

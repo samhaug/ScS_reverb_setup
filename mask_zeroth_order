@@ -124,7 +124,7 @@ for idx, tr in enumerate(sts):
     m = align_synth_data(std[idx],m)
     st_mask[idx].data = std[idx].data-m.data
 
-st_mask.write(data_dir+'FJ_mask.pk',format='PICKLE')
+st_mask.write(data_dir+'FJ_mask_stack.pk',format='PICKLE')
 
 
 

@@ -1,0 +1,88 @@
+#!/home/samhaug/anaconda2/bin/python
+
+import numpy as np
+import obspy
+import seispy
+import h5py
+from matplotlib import pyplot as plt
+from scipy.signal import correlate
+
+'''
+Perform a migration to detect reflection coefficients of mid mantle
+discontinuities. Must have access to a lookup table, waveform glossary, data
+stripped of zeroth-order discontinuities.
+
+See eq (14) of 'A Study of mid-mantle layering beneath the Western Pacific'
+1989, Revenaugh & Jordan
+'''
+
+def main():
+    wvlt_glossary = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/FJ_20160130.h5','r')
+    lookup_table = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/FJ_20160130.h5','r')
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_data/20160130/FJ_stack.pk')
+    #st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/synth_test.pk')
+    st.interpolate(1)
+    #seispy.plot.plot(st[0],phase_list=['ScSScS'])
+    st[0].data[361:551] = 0
+    st[0].data[1296:1458] = 0
+    st[0].data[2222:2387] = 0
+    #plt.plot(st[0].data)
+    #plt.show()
+
+    depth = np.arange(20,2800,1)
+
+    for shift in np.arange(350,370,2):
+        R_list = []
+        for h in depth:
+            R_list.append(find_R(st[0],h,wvlt_glossary,lookup_table,shift))
+        plt.plot(np.array(R_list)[::-1],depth[::-1],alpha=0.5,label=str(shift))
+    plt.ylim(2800,20)
+    print len(R_list)
+    plt.legend()
+    plt.show()
+
+def find_R(tr,h,wvlt_glos,lkup_tbl,shift):
+
+    stat = tr.stats.station
+    #corr_dict = {}
+    corr = 0
+    for keys in wvlt_glos:
+        #if keys[0] == 't':
+        #    continue
+        #corr_dict[keys] = correlate(tr.data,wvlt_gloss[keys][...],mode='same')
+        tr.normalize()
+        corr_sig = correlate(tr.data,wvlt_glos[keys][...]/wvlt_glos[keys][...].max(),mode='same')
+
+        '''
+        print keys
+        fig,ax = plt.subplots()
+        ax.plot(tr.data,alpha=0.5)
+        ax.plot(corr_sig,alpha=0.5)
+        fig1,ax1 = plt.subplots()
+        ax1.plot(wvlt_glos[keys][...]/wvlt_glos[keys][...].max())
+        plt.show()
+        '''
+
+        time = lkup_tbl[stat+'/'+keys][...]
+        ScS2_time = lkup_tbl[stat+'/ScS2'][...]
+        t = time[np.argmin(np.abs(time[:,0]-h)),1]
+        ScS2_t = ScS2_time[np.argmin(np.abs(time[:,0]-h)),1]
+        try:
+            corr += corr_sig[int(t-ScS2_t+shift+len(wvlt_glos[keys][...])/2.)]
+        except IndexError:
+            continue
+    corr *= 1./denominator(wvlt_glos)
+    return corr
+
+def denominator(wvlt_glos):
+    energy = 0
+    for keys in wvlt_glos:
+        energy += np.dot(wvlt_glos[keys][...],wvlt_glos[keys][...])
+    return energy
+
+main()
+
+
+
+
+
