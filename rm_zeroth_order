@@ -86,21 +86,23 @@ def synth_setup(syn_dir,st_data):
     start_time = -400
     print('synth_setup')
     st_syn = obspy.read(syn_dir+'st_T.pk')
-    st_syn.filter('bandpass',freqmax=1/25.,freqmin=1/60.)
+    st_syn.filter('bandpass',freqmax=1/25.,freqmin=1/60.,zerophase=True)
     st_syn.integrate()
     st_syn = seispy.data.normalize_on_envelope(st_syn,phase=['ScSScS'])
     st_syn = seispy.data.align_on_phase(st_syn,phase=['ScSScS'],a_min=False)
-    for idx,tr in enumerate(st_syn):
-        st_syn[idx].stats.location = st_syn[idx].stats.sac['gcarc']
-        st_syn[idx] = seispy.data.phase_window(tr,['ScSScS'],window=(start_time,2050))
-        st_syn[idx].stats.starttime = st_data[idx].stats.starttime
-        st_syn[idx].data += -1*st_syn[idx].data.mean()
-        st_syn[idx].stats.sac['gcarc'] = st_data[idx].stats.sac['gcarc']
+    #for idx,tr in enumerate(st_syn):
+    #    st_syn[idx].stats.location = st_syn[idx].stats.sac['gcarc']
+    #    st_syn[idx] = seispy.data.phase_window(tr,['ScSScS'],window=(start_time,2050))
+    #    st_syn[idx].stats.starttime = st_data[idx].stats.starttime
+    #    st_syn[idx].data += -1*st_syn[idx].data.mean()
+    #    st_syn[idx].stats.sac['gcarc'] = st_data[idx].stats.sac['gcarc']
     st_syn.interpolate(1)
-    st_syn = seispy.data.align_on_phase(st_syn,phase=['ScSScS'],a_min=False)
-    for idx,tr in enumerate(st_syn):
-        st_syn[idx].stats.sac['o'] += -1*start_time
-    st_syn.sort(['location'])
+    for idx, tr in enumerate(st_syn):
+        st_syn[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
+    #st_syn = seispy.data.align_on_phase(st_syn,phase=['ScSScS'],a_min=False)
+    #for idx,tr in enumerate(st_syn):
+    #    st_syn[idx].stats.sac['o'] += -1*start_time
+    #st_syn.sort(['location'])
     return st_syn
 
 def align_synth_data(trd,trs):
@@ -117,17 +119,19 @@ syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/'
 model = TauPyModel(model='prem_3.0_10')
 
 std = data_setup(data_dir)
-#sts = synth_setup(syn_dir,std)
+sts = synth_setup(syn_dir,std)
 #st_mask = sts.copy()
 
+'''
 for idx, tr in enumerate(std):
     m = strip_reverb(std[idx],model)
     std[idx].data *= 1-m
     seispy.plot(std[0])
     plt.show()
+'''
 
 
-#sts.write('/home/samhaug/work1/ScS_reverb_sims/mineos/synth_test.pk',format='PICKLE')
+sts.write('/home/samhaug/work1/ScS_reverb_sims/mineos/synth_test.pk',format='PICKLE')
 
 
 

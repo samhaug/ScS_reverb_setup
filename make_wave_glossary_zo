@@ -24,7 +24,7 @@ def main():
 
     net = 'FJ'
     ev = '20160130'
-    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/'+net+'_'+ev+'.h5','w')
+    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/'+net+'_'+ev+'_zero.h5','w')
 
     make_glossary(st[0],f)
     f.close()
@@ -51,34 +51,17 @@ def make_glossary(tr,h5file):
         a = seispy.data.phase_window(tr,phase,window=window,model='prem_3.0_10')
         return a.data
 
-    t = ['ScSSv660SScS',
-         'ScSSv660SScSScS',
-         'ScSSv660SScSScSScS']
+    t = ['ScSScS',
+         'ScSScSScS',
+         'ScSScSScSScS']
 
-    b = ['ScS^660ScS',
-         'ScS^660ScSScS',
-         'ScS^660ScSScSScS']
 
-    #seispy.plot.plot(tr,phase_list=t+b,model=model)
     tr = seispy.data.tr_align_on_phase(tr,phase=[t[0]])
-    #seispy.plot.plot(tr,phase_list=[t[0]])
-    h5file.create_dataset('tScS2',data=strip_phase(tr,[t[0]]))
+    h5file.create_dataset('ScS2',data=strip_phase(tr,[t[0]]))
     tr = seispy.data.tr_align_on_phase(tr,phase=[t[1]])
-    #seispy.plot.plot(tr,phase_list=[t[1]])
-    h5file.create_dataset('tScS3',data=strip_phase(tr,[t[1]],shift=2))
+    h5file.create_dataset('ScS3',data=strip_phase(tr,[t[1]],shift=2))
     tr = seispy.data.tr_align_on_phase(tr,phase=[t[2]])
-    #seispy.plot.plot(tr,phase_list=[t[2]])
-    h5file.create_dataset('tScS4',data=strip_phase(tr,[t[2]],shift=4))
-
-    tr = seispy.data.tr_align_on_phase(tr,phase=[b[0]])
-    #seispy.plot.plot(tr,phase_list=[b[0]])
-    h5file.create_dataset('bScS2',data=strip_phase(tr,[b[0]]))
-    tr = seispy.data.tr_align_on_phase(tr,phase=[b[1]])
-    #seispy.plot.plot(tr,phase_list=[b[1]])
-    h5file.create_dataset('bScS3',data=strip_phase(tr,[b[1]],shift=3))
-    tr = seispy.data.tr_align_on_phase(tr,phase=[b[2]])
-    #seispy.plot.plot(tr,phase_list=[b[2]])
-    h5file.create_dataset('bScS4',data=strip_phase(tr,[b[2]],shift=7))
+    h5file.create_dataset('ScS4',data=strip_phase(tr,[t[2]],shift=4))
 
 main()
 

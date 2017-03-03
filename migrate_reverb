@@ -13,66 +13,70 @@ discontinuities. Must have access to a lookup table, waveform glossary, data
 stripped of zeroth-order discontinuities.
 
 See eq (14) of 'A Study of mid-mantle layering beneath the Western Pacific'
-1989, Revenaugh & Jordan
+1989, Revenaugh & Jordan.
 '''
 
 def main():
     wvlt_glossary = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/FJ_20160130.h5','r')
-    lookup_table = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/FJ_20160130.h5','r')
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_data/20160130/FJ_stack.pk')
-    #st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/synth_test.pk')
-    st.interpolate(1)
-    #seispy.plot.plot(st[0],phase_list=['ScSScS'])
-    st[0].data[361:551] = 0
-    st[0].data[1296:1458] = 0
-    st[0].data[2222:2387] = 0
-    #plt.plot(st[0].data)
-    #plt.show()
+    lkup = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/FJ_20160130.h5','r')
 
-    depth = np.arange(20,2800,1)
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/st_T.pk')
+    st.filter('bandpass',freqmin=1/60.,freqmax=1/25.,zerophase=True)
+    st.integrate().normalize()
+    st = seispy.data.align_on_phase(st,phase=['ScSScS'])
+    for idx,tr in enumerate(st):
+        st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
 
-    for shift in np.arange(350,370,2):
-        R_list = []
-        for h in depth:
-            R_list.append(find_R(st[0],h,wvlt_glossary,lookup_table,shift))
-        plt.plot(np.array(R_list)[::-1],depth[::-1],alpha=0.5,label=str(shift))
-    plt.ylim(2800,20)
-    print len(R_list)
-    plt.legend()
+    #seispy.plot.plot(st[4])
+
+    depth = np.arange(660,664,2)
+    idx=4
+    stat = st[idx].stats.station
+    corr_dict,wave_e = correlate_sig(st[idx],wvlt_glossary)
+
+    R_list = []
+    for h in depth:
+        h_R = 0
+        for keys in corr_dict:
+            if 't' in keys:
+                continue
+            ScS2 = lkup[stat+'/ScS2'][:]
+            lkup_t = lkup[stat+'/'+keys][:]
+            shift = 55
+            h_R += find_R(corr_dict[keys],h,lkup_t,ScS2,shift=shift)/wave_e[keys]
+        R_list.append(h_R)
+
+    plt.plot(np.array(R_list),depth)
+    plt.ylim(depth.max(),depth.min())
     plt.show()
 
-def find_R(tr,h,wvlt_glos,lkup_tbl,shift):
-
-    stat = tr.stats.station
-    #corr_dict = {}
-    corr = 0
+def correlate_sig(tr,wvlt_glos):
+    corr_dict = {}
+    wave_e = {}
     for keys in wvlt_glos:
-        #if keys[0] == 't':
-        #    continue
-        #corr_dict[keys] = correlate(tr.data,wvlt_gloss[keys][...],mode='same')
-        tr.normalize()
-        corr_sig = correlate(tr.data,wvlt_glos[keys][...]/wvlt_glos[keys][...].max(),mode='same')
+        wvlt = wvlt_glos[keys][...]
+        corr_sig = correlate(tr.data,wvlt,mode='same')
+        wave_e[keys] = np.dot(wvlt,wvlt)
+        corr_dict[keys] = corr_sig
+    return corr_dict,wave_e
 
-        '''
-        print keys
-        fig,ax = plt.subplots()
-        ax.plot(tr.data,alpha=0.5)
-        ax.plot(corr_sig,alpha=0.5)
-        fig1,ax1 = plt.subplots()
-        ax1.plot(wvlt_glos[keys][...]/wvlt_glos[keys][...].max())
-        plt.show()
-        '''
+def find_R(corr_sig,h,lkup,ScS2,**kwargs):
+    shift = kwargs.get('shift',0)
 
-        time = lkup_tbl[stat+'/'+keys][...]
-        ScS2_time = lkup_tbl[stat+'/ScS2'][...]
-        t = time[np.argmin(np.abs(time[:,0]-h)),1]
-        ScS2_t = ScS2_time[np.argmin(np.abs(time[:,0]-h)),1]
-        try:
-            corr += corr_sig[int(t-ScS2_t+shift+len(wvlt_glos[keys][...])/2.)]
-        except IndexError:
-            continue
-    corr *= 1./denominator(wvlt_glos)
-    return corr
+    t = lkup[np.argmin(np.abs(lkup[:,0]-h)),1]
+    ScS2_time = ScS2[np.argmin(np.abs(lkup[:,0]-h)),1]
+
+    fig,ax = plt.subplots()
+    ax.plot(corr_sig,alpha=0.5)
+    ax.axvline(t-ScS2_time+400+shift)
+    plt.show()
+
+    try:
+       r = corr_sig[int(t-ScS2_time+360+shift)]
+       return r
+    except IndexError:
+       return 0
+    #corr *= 1./denominator(wvlt_glos)
 
 def denominator(wvlt_glos):
     energy = 0
