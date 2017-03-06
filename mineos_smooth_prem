@@ -1,0 +1,69 @@
+#!/home/samhaug/anaconda2/bin/python
+
+from sys import argv
+import numpy as np
+from scipy.interpolate import interp1d
+from scipy.interpolate import UnivariateSpline
+import scipy
+#from scipy.interpolate import CubicSpline
+from matplotlib import pyplot as plt
+
+'''
+Smooth all discontinuities except the 660.
+'''
+
+def main():
+    model = './models/prem_noocean.txt'
+    meta,cores,mantle = read_model(model)
+
+    #plt.plot(mantle[:,0],mantle[:,3])
+    #plt.show()
+    start = np.where(np.abs(mantle[:,0]-mantle[:,0].max()) == 220000)[0].max()
+    stop = np.where(np.abs(mantle[:,0]-mantle[:,0].max()) == 670000)[0].max()
+    print start,stop
+    x = mantle[stop:start,0]
+    v = mantle[stop:start,3]
+    newx = np.linspace(x.min(),x.max(),num=100)
+    z = np.polyfit(x,v,1)
+    p = np.poly1d(z)
+    plt.plot(x,v)
+    plt.plot(newx,p(newx))
+    #plt.plot(newx,newv)
+    plt.show()
+
+    return mantle
+    #f = interp1d(mantle[:,0],mantle[:,1::],axis=0)
+    #int_mant = np.hstack((np.transpose([r]),f(r)))
+    #int_mant[:,3]*=(1+out)
+    #int_mant[:,7]*=(1+out)
+    #plt.plot(int_mant[:,0],int_mant[:,3])
+    #plt.show()
+
+    #output_prem = np.vstack((cores,int_mant))
+    #output_prem = np.around(output_prem,3)
+
+    #write_output(output_prem,2700000,0.01)
+
+
+def read_model(filename):
+    a = open(filename)
+    f = a.read()
+    meta = f.strip().split('\n')[2].split()
+    knots,nic,noc = meta[0],meta[1],meta[2]
+    print noc
+    a.close()
+    model = np.genfromtxt(filename,skip_header=3)
+    cores = model[0:int(noc),:]
+    mantle = model[int(noc)::,:]
+    return meta,cores,mantle
+
+def write_output(out_array,discont,amp,**kwargs):
+    title= kwargs.get('title','test.txt')
+    with open(title, 'w') as f:
+        f.write('Radius: {} m, Amplitude: {} %vs\n'.format(str(discont),
+                str(amp)))
+        f.write('1    1.0000   1\n')
+        f.write('{}   {}   {}\n'.format(str(out_array.shape[0]),33,66))
+        np.savetxt(f, out_array, delimiter="   ",fmt='%.1f')
+
+mantle =  main()

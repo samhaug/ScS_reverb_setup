@@ -19,17 +19,26 @@ See eq (14) of 'A Study of mid-mantle layering beneath the Western Pacific'
 def main():
     wvlt_glossary = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/FJ_20160130.h5','r')
     lkup = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/FJ_20160130.h5','r')
-
     st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/st_T.pk')
-    st.filter('bandpass',freqmin=1/60.,freqmax=1/25.,zerophase=True)
-    st.integrate().normalize()
-    st = seispy.data.align_on_phase(st,phase=['ScSScS'])
+    st.integrate().detrend().integrate().detrend().integrate().detrend()
+    st.interpolate(1)
+    st.filter('bandpass',freqmax=1/20.,freqmin=1/80.,zerophase=True)
+    st = seispy.data.normalize_on_envelope(st)
+    st = seispy.data.align_on_phase(st,phase=['ScSScS'],a_min=False)
+    st.differentiate()
+    st.normalize()
+
     for idx,tr in enumerate(st):
         st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
 
-    #seispy.plot.plot(st[4])
+    #st[4].data[314:544] = 0
+    #st[4].data[1231:1439] = 0
+    #st[4].data[2141:2366] = 0
+    plt.plot(st[4].data)
+    plt.show()
 
-    depth = np.arange(660,664,2)
+    #depth = np.arange(20,2800,2)
+    depth = np.array([660])
     idx=4
     stat = st[idx].stats.station
     corr_dict,wave_e = correlate_sig(st[idx],wvlt_glossary)
@@ -38,12 +47,14 @@ def main():
     for h in depth:
         h_R = 0
         for keys in corr_dict:
-            if 't' in keys:
-                continue
+            #print keys
+            #if 't' in keys:
+            #    continue
             ScS2 = lkup[stat+'/ScS2'][:]
             lkup_t = lkup[stat+'/'+keys][:]
-            shift = 55
-            h_R += find_R(corr_dict[keys],h,lkup_t,ScS2,shift=shift)/wave_e[keys]
+            shift = 38
+            print keys
+            h_R += find_R(corr_dict[keys],h,lkup_t,ScS2,shift=shift,data=st[4].data)/wave_e[keys]
         R_list.append(h_R)
 
     plt.plot(np.array(R_list),depth)
@@ -54,7 +65,7 @@ def correlate_sig(tr,wvlt_glos):
     corr_dict = {}
     wave_e = {}
     for keys in wvlt_glos:
-        wvlt = wvlt_glos[keys][...]
+        wvlt = wvlt_glos[keys][0:131]
         corr_sig = correlate(tr.data,wvlt,mode='same')
         wave_e[keys] = np.dot(wvlt,wvlt)
         corr_dict[keys] = corr_sig
@@ -62,21 +73,25 @@ def correlate_sig(tr,wvlt_glos):
 
 def find_R(corr_sig,h,lkup,ScS2,**kwargs):
     shift = kwargs.get('shift',0)
+    data = kwargs.get('data',np.zeros(5))
 
     t = lkup[np.argmin(np.abs(lkup[:,0]-h)),1]
     ScS2_time = ScS2[np.argmin(np.abs(lkup[:,0]-h)),1]
 
     fig,ax = plt.subplots()
     ax.plot(corr_sig,alpha=0.5)
+    ax.plot(data,alpha=1.0,color='k')
     ax.axvline(t-ScS2_time+400+shift)
+    plt.tight_layout()
     plt.show()
 
     try:
-       r = corr_sig[int(t-ScS2_time+360+shift)]
+       r = corr_sig[int(t-ScS2_time+65+shift)]
        return r
     except IndexError:
        return 0
-    #corr *= 1./denominator(wvlt_glos)
+
+    corr *= 1./denominator(wvlt_glos)
 
 def denominator(wvlt_glos):
     energy = 0

@@ -17,11 +17,13 @@ tScS3 is a topside 660 reverberation for ScS3.
 '''
 
 def main():
+    model = TauPyModel('prem_3.0_10')
     st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/st_T.pk')
-    st.filter('bandpass',freqmin=1/60.,freqmax=1/25.,zerophase=True)
-    st.integrate().normalize()
-    st = seispy.data.align_on_phase(st,phase=['ScSScS'])
-
+    st.integrate().detrend().integrate().detrend().integrate().detrend()
+    st.interpolate(1)
+    st.filter('bandpass',freqmax=1/25.,freqmin=1/60.,zerophase=True)
+    st = seispy.data.normalize_on_envelope(st)
+    st = seispy.data.align_on_phase(st,phase=['ScSScS'],a_min=False,in_model=model)
     net = 'FJ'
     ev = '20160130'
     f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/'+net+'_'+ev+'.h5','w')
@@ -62,13 +64,16 @@ def make_glossary(tr,h5file):
     #seispy.plot.plot(tr,phase_list=t+b,model=model)
     tr = seispy.data.tr_align_on_phase(tr,phase=[t[0]])
     #seispy.plot.plot(tr,phase_list=[t[0]])
-    h5file.create_dataset('tScS2',data=strip_phase(tr,[t[0]]))
+    #h5file.create_dataset('tScS2',data=strip_phase(tr,[t[0]]))
+    h5file.create_dataset('tScS2',data=-1*strip_phase(tr,[b[0]]))
     tr = seispy.data.tr_align_on_phase(tr,phase=[t[1]])
     #seispy.plot.plot(tr,phase_list=[t[1]])
-    h5file.create_dataset('tScS3',data=strip_phase(tr,[t[1]],shift=2))
+    #h5file.create_dataset('tScS3',data=strip_phase(tr,[t[1]],shift=3))
+    h5file.create_dataset('tScS3',data=-1*strip_phase(tr,[b[1]],shift=5))
     tr = seispy.data.tr_align_on_phase(tr,phase=[t[2]])
     #seispy.plot.plot(tr,phase_list=[t[2]])
-    h5file.create_dataset('tScS4',data=strip_phase(tr,[t[2]],shift=4))
+    #h5file.create_dataset('tScS4',data=strip_phase(tr,[t[2]],shift=7))
+    h5file.create_dataset('tScS4',data=-1*strip_phase(tr,[b[2]],shift=8))
 
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[0]])
     #seispy.plot.plot(tr,phase_list=[b[0]])
@@ -78,7 +83,7 @@ def make_glossary(tr,h5file):
     h5file.create_dataset('bScS3',data=strip_phase(tr,[b[1]],shift=3))
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[2]])
     #seispy.plot.plot(tr,phase_list=[b[2]])
-    h5file.create_dataset('bScS4',data=strip_phase(tr,[b[2]],shift=7))
+    h5file.create_dataset('bScS4',data=strip_phase(tr,[b[2]],shift=6))
 
 main()
 

@@ -1,0 +1,45 @@
+#!/home/samhaug/anaconda2/bin/python
+
+import numpy as np
+import obspy
+import h5py
+import seispy
+from scipy.signal import gaussian
+from obspy.taup import TauPyModel
+from matplotlib import pyplot as plt
+
+'''
+Simplify reverberation waveforms by best fitting two gaussians.
+
+Makes an h5py file with waveforms from 660 reverberations. Naming scheme:
+tScS3 is a topside 660 reverberation for ScS3.
+'''
+
+def main():
+    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/FJ_20160130.h5')
+    for keys in f:
+        fit_gaussian(f[keys][...],40,5)
+
+def fit_gaussian(wave,M,std):
+    imin = np.argmin(wave)
+    amin = wave[np.argmin(wave)]
+    imax = np.argmax(wave)
+    amax = wave[np.argmax(wave)]
+    max = np.hstack((np.zeros(imax-int(M/2.)),amax*gaussian(M,std)))
+    min = np.hstack((np.zeros(imin-int(M/2.)),amin*gaussian(M,std)))
+    plt.plot(wave)
+    plt.plot(max)
+    plt.plot(min)
+    plt.show()
+
+
+main()
+
+
+
+
+
+
+
+
+
