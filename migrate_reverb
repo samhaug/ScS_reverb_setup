@@ -20,10 +20,10 @@ def main():
     wvlt_glossary = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/FJ_20160130.h5','r')
     lkup = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/FJ_20160130.h5','r')
     st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/st_T.pk')
-    st.integrate().detrend().integrate().detrend().integrate().detrend()
+    st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmax=1/20.,freqmin=1/80.,zerophase=True)
-    st = seispy.data.normalize_on_envelope(st)
+    #st.filter('bandpass',freqmax=1/15.,freqmin=1/70.,zerophase=True)
+    st.filter('bandpass',freqmax=1/10.,freqmin=1/95.,zerophase=True)
     st = seispy.data.align_on_phase(st,phase=['ScSScS'],a_min=False)
     st.differentiate()
     st.normalize()
@@ -31,15 +31,15 @@ def main():
     for idx,tr in enumerate(st):
         st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
 
-    #st[4].data[314:544] = 0
-    #st[4].data[1231:1439] = 0
-    #st[4].data[2141:2366] = 0
-    plt.plot(st[4].data)
+    idx=3
+    #st[idx].data[314:544] = 0
+    #st[idx].data[1231:1439] = 0
+    #st[idx].data[2141:2366] = 0
+    plt.plot(st[idx].data)
     plt.show()
 
-    #depth = np.arange(20,2800,2)
-    depth = np.array([660])
-    idx=4
+    depth = np.arange(10,2800,2)
+    #depth = np.array([670])
     stat = st[idx].stats.station
     corr_dict,wave_e = correlate_sig(st[idx],wvlt_glossary)
 
@@ -49,11 +49,10 @@ def main():
         for keys in corr_dict:
             #print keys
             #if 't' in keys:
-            #    continue
+            #   continue
             ScS2 = lkup[stat+'/ScS2'][:]
             lkup_t = lkup[stat+'/'+keys][:]
-            shift = 38
-            print keys
+            shift = 55
             h_R += find_R(corr_dict[keys],h,lkup_t,ScS2,shift=shift,data=st[4].data)/wave_e[keys]
         R_list.append(h_R)
 
@@ -65,7 +64,8 @@ def correlate_sig(tr,wvlt_glos):
     corr_dict = {}
     wave_e = {}
     for keys in wvlt_glos:
-        wvlt = wvlt_glos[keys][0:131]
+        #wvlt = wvlt_glos[keys][0:131]
+        wvlt = wvlt_glos[keys]
         corr_sig = correlate(tr.data,wvlt,mode='same')
         wave_e[keys] = np.dot(wvlt,wvlt)
         corr_dict[keys] = corr_sig
@@ -78,15 +78,18 @@ def find_R(corr_sig,h,lkup,ScS2,**kwargs):
     t = lkup[np.argmin(np.abs(lkup[:,0]-h)),1]
     ScS2_time = ScS2[np.argmin(np.abs(lkup[:,0]-h)),1]
 
+    '''
     fig,ax = plt.subplots()
     ax.plot(corr_sig,alpha=0.5)
     ax.plot(data,alpha=1.0,color='k')
     ax.axvline(t-ScS2_time+400+shift)
+    ax.axvline(400)
     plt.tight_layout()
     plt.show()
+    '''
 
     try:
-       r = corr_sig[int(t-ScS2_time+65+shift)]
+       r = corr_sig[int(t-ScS2_time+400+shift)]
        return r
     except IndexError:
        return 0
