@@ -28,7 +28,7 @@ networks =  unique(net_list)
 
 for ii in networks:
     print('Reading '+ii)
-    st = obspy.read(ii+'*.sac')
+    st = obspy.read(ii+'*t.sac')
     for tr in st:
         tr.stats.sac['o'] = date-tr.stats.starttime
     st.write(ii+'.pk',format='PICKLE')
