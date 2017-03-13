@@ -17,7 +17,7 @@ date = obspy.core.utcdatetime.UTCDateTime(int(f[1]),int(f[2]),int(f[3]),
                                           int(float(f[6])),5000)
 
 
-ldir = glob.glob('*.sac')
+ldir = glob.glob('*t.sac')
 
 net_list = []
 

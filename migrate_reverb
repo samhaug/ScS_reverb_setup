@@ -38,8 +38,9 @@ def main():
     plt.plot(st[idx].data)
     plt.show()
 
-    depth = np.arange(10,2800,2)
-    #depth = np.array([670])
+    #depth = np.arange(10,2800,2)
+    #depth = np.arange(900,1000,10)
+    depth = np.array([670])
     stat = st[idx].stats.station
     corr_dict,wave_e = correlate_sig(st[idx],wvlt_glossary)
 
@@ -78,15 +79,13 @@ def find_R(corr_sig,h,lkup,ScS2,**kwargs):
     t = lkup[np.argmin(np.abs(lkup[:,0]-h)),1]
     ScS2_time = ScS2[np.argmin(np.abs(lkup[:,0]-h)),1]
 
-    '''
     fig,ax = plt.subplots()
-    ax.plot(corr_sig,alpha=0.5)
-    ax.plot(data,alpha=1.0,color='k')
+    ax.plot(corr_sig,lw=2)
+    ax.plot(data,alpha=0.5,color='k')
     ax.axvline(t-ScS2_time+400+shift)
     ax.axvline(400)
     plt.tight_layout()
     plt.show()
-    '''
 
     try:
        r = corr_sig[int(t-ScS2_time+400+shift)]

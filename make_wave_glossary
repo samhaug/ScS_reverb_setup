@@ -50,7 +50,7 @@ def make_glossary(tr,h5file):
     model = TauPyModel(model='prem_3.0_10')
 
     def strip_phase(tr,phase,**kwargs):
-        window = kwargs.get('window',[-20,140])
+        window = kwargs.get('window',[-20,120])
         shift = kwargs.get('shift',0)
         window[0] += shift
         window[1] += shift
@@ -71,20 +71,35 @@ def make_glossary(tr,h5file):
     h5file.create_dataset('tScS2',data=strip_phase(tr,[b[0]])*-1)
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[1]])
     #seispy.plot.plot(tr,phase_list=[t[1]])
-    h5file.create_dataset('tScS3',data=strip_phase(tr,[b[1]],shift=0)*-1)
+    h5file.create_dataset('tScS3',data=strip_phase(tr,[b[1]],shift=3)*-1)
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[2]])
     #seispy.plot.plot(tr,phase_list=[t[2]])
-    h5file.create_dataset('tScS4',data=strip_phase(tr,[b[2]],shift=0)*-1)
+    h5file.create_dataset('tScS4',data=strip_phase(tr,[b[2]],shift=8)*-1)
+
 
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[0]])
     #seispy.plot.plot(tr,phase_list=[b[0]])
     h5file.create_dataset('bScS2',data=strip_phase(tr,[b[0]]))
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[1]])
     #seispy.plot.plot(tr,phase_list=[b[1]])
-    h5file.create_dataset('bScS3',data=strip_phase(tr,[b[1]],shift=0))
+    h5file.create_dataset('bScS3',data=strip_phase(tr,[b[1]],shift=3))
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[2]])
     #seispy.plot.plot(tr,phase_list=[b[2]])
-    h5file.create_dataset('bScS4',data=strip_phase(tr,[b[2]],shift=0))
+    h5file.create_dataset('bScS4',data=strip_phase(tr,[b[2]],shift=8))
+
+    #plt.plot(strip_phase(tr,[b[0]],shift=0)*-1))
+    #plt.plot(strip_phase(tr,[b[1]],shift=0)*-1))
+    #plt.plot(strip_phase(tr,[b[2]],shift=0)*-1))
+    #plt.show()
+    for keys in h5file:
+        if 'b' in keys:
+            plt.plot(h5file[keys][...])
+    plt.show()
+
+    for keys in h5file:
+        if 't' in keys:
+            plt.plot(h5file[keys][...])
+    plt.show()
 
 main()
 
