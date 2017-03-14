@@ -87,7 +87,6 @@ def make_glossary(tr,h5file):
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[2]])
     h5file.create_dataset('tScS4',data=strip_phase(tr,b[2])*-1)
 
-
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[0]])
     h5file.create_dataset('bScS2',data=strip_phase(tr,b[0]))
 
