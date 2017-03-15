@@ -1,5 +1,23 @@
 #!/home/samhaug/anaconda2/bin/python
 
+'''
+==============================================================================
+
+File Name : migrate_reverb.py
+Purpose : Perform a migration to detect reflection coefficients of mid mantle
+          discontinuities. Must have access to a lookup table, waveform glossary,
+          data stripped of zeroth-order discontinuities.
+
+          See eq (14) of 'A Study of mid-mantle layering beneath the Western Pacific'
+          1989, Revenaugh & Jordan.
+
+Creation Date : 14-03-2017
+Last Modified : Tue 14 Mar 2017 11:54:11 AM EDT
+Created By : Samuel M. Haugland
+
+==============================================================================
+'''
+
 import numpy as np
 import obspy
 import seispy
@@ -7,25 +25,16 @@ import h5py
 from matplotlib import pyplot as plt
 from scipy.signal import correlate
 
-'''
-Perform a migration to detect reflection coefficients of mid mantle
-discontinuities. Must have access to a lookup table, waveform glossary, data
-stripped of zeroth-order discontinuities.
-
-See eq (14) of 'A Study of mid-mantle layering beneath the Western Pacific'
-1989, Revenaugh & Jordan.
-'''
 
 def main():
-    wvlt_glossary = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/FJ_20160130.h5','r')
-    lkup = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/FJ_20160130.h5','r')
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/st_T.pk')
+    wvlt_glossary = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/prem_FJ_20160130.h5','r')
+    lkup = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/NA_prem_20160130.h5','r')
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_368_FJ/st_T.pk')
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    #st.filter('bandpass',freqmax=1/15.,freqmin=1/70.,zerophase=True)
-    st.filter('bandpass',freqmax=1/10.,freqmin=1/95.,zerophase=True)
+    st.filter('bandpass',freqmax=1/15.,freqmin=1/75.,zerophase=True)
     st = seispy.data.align_on_phase(st,phase=['ScSScS'],a_min=False)
-    st.differentiate()
+    #st.differentiate()
     st.normalize()
 
     for idx,tr in enumerate(st):
@@ -35,42 +44,43 @@ def main():
     #st[idx].data[314:544] = 0
     #st[idx].data[1231:1439] = 0
     #st[idx].data[2141:2366] = 0
-    plt.plot(st[idx].data)
-    plt.show()
+    #plt.plot(st[idx].data)
+    #plt.show()
 
-    #depth = np.arange(10,2800,2)
+    depth = np.arange(50,2800,1)
     #depth = np.arange(900,1000,10)
-    depth = np.array([670])
+    #depth = np.array([670])
     stat = st[idx].stats.station
-    corr_dict,wave_e = correlate_sig(st[idx],wvlt_glossary)
+    corr_dict,wave_e,wvlt_len = correlate_sig(st[idx],wvlt_glossary)
 
     R_list = []
     for h in depth:
         h_R = 0
         for keys in corr_dict:
-            #print keys
-            #if 't' in keys:
-            #   continue
             ScS2 = lkup[stat+'/ScS2'][:]
             lkup_t = lkup[stat+'/'+keys][:]
-            shift = 55
+            shift = int(wvlt_len/2.)-22
             h_R += find_R(corr_dict[keys],h,lkup_t,ScS2,shift=shift,data=st[4].data)/wave_e[keys]
         R_list.append(h_R)
 
-    plt.plot(np.array(R_list),depth)
+    plt.plot(np.array(R_list),depth,lw=2)
     plt.ylim(depth.max(),depth.min())
+    plt.axhline(220,color='k')
+    plt.axhline(400,color='k')
+    plt.axhline(670,color='k')
+    plt.xlim(-10,10)
+    plt.grid()
     plt.show()
 
 def correlate_sig(tr,wvlt_glos):
     corr_dict = {}
     wave_e = {}
     for keys in wvlt_glos:
-        #wvlt = wvlt_glos[keys][0:131]
         wvlt = wvlt_glos[keys]
         corr_sig = correlate(tr.data,wvlt,mode='same')
         wave_e[keys] = np.dot(wvlt,wvlt)
         corr_dict[keys] = corr_sig
-    return corr_dict,wave_e
+    return corr_dict,wave_e,len(wvlt)
 
 def find_R(corr_sig,h,lkup,ScS2,**kwargs):
     shift = kwargs.get('shift',0)
@@ -79,13 +89,7 @@ def find_R(corr_sig,h,lkup,ScS2,**kwargs):
     t = lkup[np.argmin(np.abs(lkup[:,0]-h)),1]
     ScS2_time = ScS2[np.argmin(np.abs(lkup[:,0]-h)),1]
 
-    fig,ax = plt.subplots()
-    ax.plot(corr_sig,lw=2)
-    ax.plot(data,alpha=0.5,color='k')
-    ax.axvline(t-ScS2_time+400+shift)
-    ax.axvline(400)
-    plt.tight_layout()
-    plt.show()
+    #plot_corr(t,corr_sig,data,ScS2_time,shift)
 
     try:
        r = corr_sig[int(t-ScS2_time+400+shift)]
@@ -94,6 +98,14 @@ def find_R(corr_sig,h,lkup,ScS2,**kwargs):
        return 0
 
     corr *= 1./denominator(wvlt_glos)
+
+def plot_corr(t,corr_sig,data,ScS2_time,shift):
+    fig,ax = plt.subplots(figsize=(25,6))
+    ax.plot(corr_sig,lw=2)
+    ax.plot(data,alpha=0.5,color='k')
+    ax.axvline(t-ScS2_time+400+shift)
+    plt.tight_layout()
+    plt.show()
 
 def denominator(wvlt_glos):
     energy = 0

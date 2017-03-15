@@ -21,9 +21,9 @@ and time.
 '''
 
 def main():
-    model = TauPyModel(model='prem_3.0_10')
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_data/20160130/'+'FJ_clean.pk')
-    f = setup_h5('20160130',st[0].stats.network)
+    model = TauPyModel(model='prem_0.0_10')
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_468_FJ/st_T.pk')
+    f = setup_h5('prem_468_20160130',st[0].stats.network)
     for tr in st:
         find_reverb_times(tr,model,f)
 
@@ -65,7 +65,7 @@ def find_reverb_times(tr,model,h5file):
                       'ScS^'+ds+'ScS',
                       'ScS^'+ds+'ScSScS',
                       'ScS^'+ds+'ScSScSScS',
-                      'ScS^'+ds+'ScSScSScS']
+                      'ScS^'+ds+'ScSScSScSScS']
 
         topside =    [
                       'ScSSv'+ds+'SScS',

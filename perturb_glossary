@@ -1,0 +1,70 @@
+#!/home/samhaug/anaconda2/bin/python
+
+'''
+==============================================================================
+
+File Name : perturb_glossary.py
+Purpose : Make a waveform lookup table based on a shallower reverberation
+          interval.
+Creation Date : 14-03-2017
+Last Modified : Tue 14 Mar 2017 08:44:02 PM EDT
+Created By : Samuel M. Haugland
+
+==============================================================================
+'''
+
+import numpy as np
+from matplotlib import pyplot as plt
+from subprocess import call
+from os import listdir
+import h5py
+import obspy
+import seispy
+from obspy.taup import TauPyModel
+
+def main():
+    model = TauPyModel('prem_0.0_10.npz')
+    wv_glos = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary')
+    st_ref = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_368_FJ/st_T.pk')
+    st_pert = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_568_FJ/st_T.pk')
+    stretch_time = find_stretch_factor(st_ref,st_pert,model)
+    print stretch_time
+
+def find_strech_factor(st_ref,st_pert,model):
+
+    pl = ['ScS^670ScS','sScS^670ScS']
+
+    ref_arr = model.get_travel_times(source_depth_in_km=st_ref[0].stats.sac['evdp'],
+                           distance_in_degree=st_ref[0].stats.sac['gcarc'],
+                           phase_list = pl)
+
+    pert_arr = model.get_travel_times(source_depth_in_km=st_pert[0].stats.sac['evdp'],
+                           distance_in_degree=st_pert[0].stats.sac['gcarc'],
+                           phase_list = pl)
+
+    ref_separate = ref_arr[1]-ref_arr[0]
+    pert_separate = pert_arr[1]-pert_arr[0]
+    stretch_time int(ref_separate-pert_separate)
+
+    return stretch_time
+
+def stretch_whitespace(wv_glos,pert_wv_glos,stretch_time):
+
+    for keys in wv_glos:
+        ref_wave = [keys][...]
+        h = int(len(ref_wave)/2.)
+        new_ref = np.hstack((ref_wave[0:h],np.zeros(stretch_time),ref_wave[h+stretch_time::]))
+        pert_wv_glos.create_dataset(keys,data=new_ref)
+
+
+main()
+
+
+
+
+
+
+
+
+
+

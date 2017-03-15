@@ -22,24 +22,26 @@ import h5py
 import obspy
 import seispy
 from obspy.taup import TauPyModel
+from scipy.signal import tukey
 
 
 def main():
-    model = TauPyModel('prem_3.0_10')
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/iasp91_okhotsk/st_T.pk')
+
+    model = TauPyModel('prem50')
+
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_468_FJ/st_T.pk')
     net = 'FJ'
     ev = '20160130'
-    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/iasp_'+net+'_'+ev+'.h5','w')
+    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/prem_468_'+net+'_'+ev+'.h5','w')
 
-    st.integrate().detrend()
+    st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    #st.filter('bandpass',freqmax=1/15.,freqmin=1/70.,zerophase=True)
     st.filter('bandpass',freqmax=1/15.,freqmin=1/75.,zerophase=True)
     st = seispy.data.align_on_phase(st,phase=['ScSScS'],a_min=False)
     st.normalize()
 
-
-    make_glossary(st[0],f)
+    seispy.plot.simple_section(st)
+    make_glossary(st[0],f,model)
     f.close()
 
 def shift_stream(st,shift):
@@ -52,23 +54,23 @@ def shift_stream(st,shift):
     seispy.plot.simple_section(st,a_list=['S'])
     return st
 
-def make_glossary(tr,h5file):
+def make_glossary(tr,h5file,model):
 
-    model = TauPyModel(model='prem_3.0_10')
-
-    def strip_phase(tr,phase,**kwargs):
+    def strip_phase(tr,phase,model,**kwargs):
         window = kwargs.get('window',[-20,120])
         shift = kwargs.get('shift',0)
-        model = TauPyModel('iasp91')
-        print phase,'s'+phase
-
         arr = model.get_travel_times(source_depth_in_km=tr.stats.sac['evdp'],
                                distance_in_degree=tr.stats.sac['gcarc'],
                                phase_list = [phase,'s'+phase])
         win_len = np.int(np.abs(arr[1].time-arr[0].time))
-        print win_len
-        a = seispy.data.phase_window(tr,[phase],window=(-20,win_len+20),model='iasp91')
-        return a.data
+        window = (-20,win_len+40)
+        a = seispy.data.phase_window(tr,[phase],window=window,model=model)
+        zero = 1+(-1*tukey(window[1]-window[0]-90,0.5))
+        zero = np.hstack((np.ones(45),zero,np.ones(len(a.data)-45-len(zero))))
+        #plt.plot(zero)
+        #plt.plot(a.data*10)
+        #plt.show()
+        return a.data*zero
 
     t = ['ScSSv660SScS',
          'ScSSv660SScSScS',
@@ -79,27 +81,23 @@ def make_glossary(tr,h5file):
          'ScS^660ScSScSScS']
 
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[0]])
-    h5file.create_dataset('tScS2',data=strip_phase(tr,b[0])*-1)
+    h5file.create_dataset('tScS2',data=strip_phase(tr,b[0],model)*-1)
 
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[1]])
-    h5file.create_dataset('tScS3',data=strip_phase(tr,b[1])*-1)
+    h5file.create_dataset('tScS3',data=strip_phase(tr,b[1],model)*-1)
 
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[2]])
-    h5file.create_dataset('tScS4',data=strip_phase(tr,b[2])*-1)
+    h5file.create_dataset('tScS4',data=strip_phase(tr,b[2],model)*-1)
 
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[0]])
-    h5file.create_dataset('bScS2',data=strip_phase(tr,b[0]))
+    h5file.create_dataset('bScS2',data=strip_phase(tr,b[0],model))
 
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[1]])
-    h5file.create_dataset('bScS3',data=strip_phase(tr,b[1]))
+    h5file.create_dataset('bScS3',data=strip_phase(tr,b[1],model))
 
     tr = seispy.data.tr_align_on_phase(tr,phase=[b[2]])
-    h5file.create_dataset('bScS4',data=strip_phase(tr,b[2]))
+    h5file.create_dataset('bScS4',data=strip_phase(tr,b[2],model))
 
-    #plt.plot(strip_phase(tr,[b[0]],shift=0)*-1))
-    #plt.plot(strip_phase(tr,[b[1]],shift=0)*-1))
-    #plt.plot(strip_phase(tr,[b[2]],shift=0)*-1))
-    #plt.show()
     for keys in h5file:
         if 'b' in keys:
             plt.plot(h5file[keys][...])
