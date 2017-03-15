@@ -24,11 +24,23 @@ from obspy.taup import TauPyModel
 
 def main():
     model = TauPyModel('prem_0.0_10')
-    wv_glos = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/prem_FJ_20160130.h5')
+
+    # Unperturbed waveform glossary
+    wv_glos = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/prem_368_FJ_20160130.h5')
+
+    # Obspy stream for unperturbed depth.
     st_ref = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_368_FJ/st_T.pk')
+
+    # Name of perturbed waveform glossary
+    pert_wv_glos = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/prem_568_FJ_20160130.h5')
+
+    # Obspy stream for perturbed depth.
     st_pert = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_568_FJ/st_T.pk')
+
+
     stretch_time = find_stretch_factor(st_ref,st_pert,model)
-    print stretch_time
+
+    stretch_whitespace(wv_glos,pert_wv_glos,stretch_time)
 
 def find_stretch_factor(st_ref,st_pert,model):
 
@@ -51,9 +63,12 @@ def find_stretch_factor(st_ref,st_pert,model):
 def stretch_whitespace(wv_glos,pert_wv_glos,stretch_time):
 
     for keys in wv_glos:
-        ref_wave = [keys][...]
+        ref_wave = wv_glos[keys][...]
         h = int(len(ref_wave)/2.)
-        new_ref = np.hstack((ref_wave[0:h],np.zeros(stretch_time),ref_wave[h+stretch_time::]))
+        new_ref = np.hstack((ref_wave[0:h],np.zeros(stretch_time),ref_wave[h::]))
+        plt.plot(ref_wave)
+        plt.plot(new_ref)
+        plt.show()
         pert_wv_glos.create_dataset(keys,data=new_ref)
 
 

@@ -29,10 +29,10 @@ def main():
 
     model = TauPyModel('prem50')
 
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_468_FJ/st_T.pk')
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_368_FJ/st_T.pk')
     net = 'FJ'
     ev = '20160130'
-    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/prem_468_'+net+'_'+ev+'.h5','w')
+    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/prem_368_'+net+'_'+ev+'.h5','w')
 
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)

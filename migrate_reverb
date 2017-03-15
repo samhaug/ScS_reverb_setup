@@ -27,9 +27,9 @@ from scipy.signal import correlate
 
 
 def main():
-    wvlt_glossary = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/prem_FJ_20160130.h5','r')
-    lkup = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/NA_prem_20160130.h5','r')
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_368_FJ/st_T.pk')
+    wvlt_glossary = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/prem_568_FJ_20160130.h5','r')
+    lkup = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/NA_prem_568_20160130.h5','r')
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_568_FJ/st_T.pk')
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
     st.filter('bandpass',freqmax=1/15.,freqmin=1/75.,zerophase=True)
@@ -47,7 +47,7 @@ def main():
     #plt.plot(st[idx].data)
     #plt.show()
 
-    depth = np.arange(50,2800,1)
+    depth = np.arange(10,2800,2)
     #depth = np.arange(900,1000,10)
     #depth = np.array([670])
     stat = st[idx].stats.station
@@ -59,7 +59,7 @@ def main():
         for keys in corr_dict:
             ScS2 = lkup[stat+'/ScS2'][:]
             lkup_t = lkup[stat+'/'+keys][:]
-            shift = int(wvlt_len/2.)-22
+            shift = int(wvlt_len/2.)-58
             h_R += find_R(corr_dict[keys],h,lkup_t,ScS2,shift=shift,data=st[4].data)/wave_e[keys]
         R_list.append(h_R)
 
