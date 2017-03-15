@@ -23,14 +23,14 @@ import seispy
 from obspy.taup import TauPyModel
 
 def main():
-    model = TauPyModel('prem_0.0_10.npz')
-    wv_glos = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary')
+    model = TauPyModel('prem_0.0_10')
+    wv_glos = h5py.File('/home/samhaug/work1/ScS_reverb_sims/wave_glossary/prem_FJ_20160130.h5')
     st_ref = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_368_FJ/st_T.pk')
     st_pert = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_568_FJ/st_T.pk')
     stretch_time = find_stretch_factor(st_ref,st_pert,model)
     print stretch_time
 
-def find_strech_factor(st_ref,st_pert,model):
+def find_stretch_factor(st_ref,st_pert,model):
 
     pl = ['ScS^670ScS','sScS^670ScS']
 
@@ -42,9 +42,9 @@ def find_strech_factor(st_ref,st_pert,model):
                            distance_in_degree=st_pert[0].stats.sac['gcarc'],
                            phase_list = pl)
 
-    ref_separate = ref_arr[1]-ref_arr[0]
-    pert_separate = pert_arr[1]-pert_arr[0]
-    stretch_time int(ref_separate-pert_separate)
+    ref_separate = ref_arr[1].time-ref_arr[0].time
+    pert_separate = pert_arr[1].time-pert_arr[0].time
+    stretch_time = int(pert_separate-ref_separate)
 
     return stretch_time
 
