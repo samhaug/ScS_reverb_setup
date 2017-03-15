@@ -87,7 +87,6 @@ def strip_reverb(tr,time_d):
     #plt.plot(tr.data,alpha=0.5)
     plt.show()
 
-
 st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/axisem/FJ_prem/st_T.pk')
 st.filter('lowpass',freq=1./25)
 st.normalize()

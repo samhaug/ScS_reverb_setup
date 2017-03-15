@@ -8,6 +8,8 @@ from matplotlib import pyplot as plt
 import scipy
 
 '''
+THIS SCRIPT DOES NOT WORK. IT IS A DIRECT INVERSION. FOR HISTORICAL PURPOSES
+
 Perform an inversion to get reflectivity throughout the mantle.
 Need a path to data and a path to the greens functions saved in an h5 file
 format.

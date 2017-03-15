@@ -12,6 +12,11 @@ from os import listdir
 from scipy.signal import correlate
 
 '''
+This code was to make greens functions for the depreciated invert_gf.
+
+Reflectivity is solved with migrate_reverb and it takes waveforms from the
+waveform glossary.
+
 Make greens functions for higher order reverberations by shifting the 660
 km reverberation traveltimes.
 '''

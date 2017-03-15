@@ -15,6 +15,22 @@ Mask all but zeroth order reverb from synthetic. Subtract from data.
 Save higher order reverberations of data
 '''
 
+def main():
+    data_dir = '/home/samhaug/work1/ScS_reverb_data/20160130/'
+    syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/'
+    model = TauPyModel(model='prem_3.0_10')
+
+    std = data_setup(data_dir)
+    sts = synth_setup(syn_dir,std)
+    st_mask = sts.copy()
+
+    for idx, tr in enumerate(sts):
+        m = strip_reverb(sts[idx],model)
+        m = align_synth_data(std[idx],m)
+        st_mask[idx].data = std[idx].data-m.data
+
+    st_mask.write(data_dir+'FJ_mask_stack.pk',format='PICKLE')
+
 def find_reverb_times(tr,model):
     '''
     Find traveltimes for top and bottomside reverberations at arbitrary depth.
@@ -111,21 +127,4 @@ def align_synth_data(trd,trs):
     trs.data = np.roll(trs.data,shift)
     return trs
 
-data_dir = '/home/samhaug/work1/ScS_reverb_data/20160130/'
-syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/'
-model = TauPyModel(model='prem_3.0_10')
-
-std = data_setup(data_dir)
-sts = synth_setup(syn_dir,std)
-st_mask = sts.copy()
-
-for idx, tr in enumerate(sts):
-    m = strip_reverb(sts[idx],model)
-    m = align_synth_data(std[idx],m)
-    st_mask[idx].data = std[idx].data-m.data
-
-st_mask.write(data_dir+'FJ_mask_stack.pk',format='PICKLE')
-
-
-
-
+main()

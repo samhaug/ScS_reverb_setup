@@ -37,7 +37,6 @@ def main():
     write_output(output_prem,rad_discont*1000,0.01)
 
 def make_discont(rad,amp):
-
     '''
     rad: location of discontinuity
     amp: amplitude of discontinuity
@@ -51,7 +50,6 @@ def make_discont(rad,amp):
     return out,r
 
 def read_model(filename):
-
     a = open(filename)
     f = a.read()
     meta = f.strip().split('\n')[2].split()
@@ -64,7 +62,6 @@ def read_model(filename):
     return meta,cores,mantle
 
 def write_output(out_array,discont,amp,**kwargs):
-
     title= kwargs.get('title','test.txt')
     with open(title, 'w') as f:
         f.write('Radius: {} m, Amplitude: {} %vs\n'.format(str(discont),

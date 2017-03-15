@@ -10,7 +10,6 @@ every 10km for arbitrary mid mantle discontinuity finding.
 '''
 
 def read_mineos_vel(file_name):
-
     vel = np.genfromtxt(file_name,skip_header=3)
     vel = vel[:,0:4]
     vel *= 1/1000.
@@ -20,7 +19,6 @@ def read_mineos_vel(file_name):
     return vel
 
 def write_taup(vel_array,fname):
-
     mantle = vel_array[0:118,:]
     mantle_rad = mantle[:,0]
     f = interp1d(mantle[:,0],mantle,axis=0)
@@ -41,7 +39,6 @@ def write_taup(vel_array,fname):
         f.write('prem_model.tvel P\n')
         f.write('prem_model.tvel S\n')
         np.savetxt(f,vel_array,delimiter='   ',fmt='%0.4f')
-
 
 #for ii in listdir('./perturb_220'):
 vel = read_mineos_vel('./vel_perturb/vel_0.0.txt')

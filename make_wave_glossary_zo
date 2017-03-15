@@ -12,6 +12,8 @@ Make glossary of reverberation waveforms to be used in migration.
 
 Have the option of shifting all traces to align phase better.
 
+This uses zeroth order reverberations.
+
 Makes an h5py file with waveforms from 660 reverberations. Naming scheme:
 tScS3 is a topside 660 reverberation for ScS3.
 '''
@@ -40,7 +42,6 @@ def shift_stream(st,shift):
     return st
 
 def make_glossary(tr,h5file):
-
     model = TauPyModel(model='prem_3.0_10')
 
     def strip_phase(tr,phase,**kwargs):

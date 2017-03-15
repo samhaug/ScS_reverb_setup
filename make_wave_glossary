@@ -26,7 +26,6 @@ from scipy.signal import tukey
 
 
 def main():
-
     model = TauPyModel('prem50')
 
     st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_368_FJ/st_T.pk')
@@ -55,7 +54,6 @@ def shift_stream(st,shift):
     return st
 
 def make_glossary(tr,h5file,model):
-
     def strip_phase(tr,phase,model,**kwargs):
         window = kwargs.get('window',[-20,120])
         shift = kwargs.get('shift',0)

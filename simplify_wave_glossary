@@ -9,6 +9,9 @@ from obspy.taup import TauPyModel
 from matplotlib import pyplot as plt
 
 '''
+This script is no longer neccessary. It was a failed attempt to simplify a
+problem when the solution was to allow higher frequencies into the data
+
 Simplify reverberation waveforms by best fitting two gaussians.
 
 Makes an h5py file with waveforms from 660 reverberations. Naming scheme:
@@ -31,7 +34,6 @@ def fit_gaussian(wave,M,std):
     plt.plot(max)
     plt.plot(min)
     plt.show()
-
 
 main()
 

@@ -5,6 +5,11 @@ from numpy import unique
 import obspy
 import sys
 
+'''
+Executable to be run in a folder of sac data from the china array.
+Must have a CMTSOLUTION file in this folder.
+This script will sort all data into pk files for each network
+'''
 try:
     f = open('CMTSOLUTION')
 except IOError:

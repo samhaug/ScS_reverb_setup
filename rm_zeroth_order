@@ -13,7 +13,28 @@ from scipy.signal import correlate
 '''
 Zero out all zeroth order reverberations from data. Leave a hole in the data
 where they used to be.
+
+This is different from mask_zeroth_order in that it doesn't subtract a
+synthetic from the data. It uses a tukey window to zero them out.
 '''
+
+def main():
+    data_dir = '/home/samhaug/work1/ScS_reverb_data/20160130/'
+    syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/'
+    model = TauPyModel(model='prem_3.0_10')
+
+    std = data_setup(data_dir)
+    sts = synth_setup(syn_dir,std)
+    #st_mask = sts.copy()
+
+    '''
+    for idx, tr in enumerate(std):
+        m = strip_reverb(std[idx],model)
+        std[idx].data *= 1-m
+        seispy.plot(std[0])
+        plt.show()
+    '''
+    sts.write('/home/samhaug/work1/ScS_reverb_sims/mineos/synth_test.pk',format='PICKLE')
 
 def find_reverb_times(tr,model):
     '''
@@ -22,11 +43,9 @@ def find_reverb_times(tr,model):
 
     evdp = tr.stats.sac['evdp']
     gcarc = tr.stats.sac['gcarc']
-
     ScS_list = ['ScSScS',
                 'ScSScSScS',
                 'ScSScSScSScS']
-
     ScS_arr = model.get_travel_times(source_depth_in_km=evdp,
                                distance_in_degree=gcarc,
                                phase_list = ScS_list)
@@ -114,26 +133,6 @@ def align_synth_data(trd,trs):
     trs.data = np.roll(trs.data,shift)
     return trs
 
-data_dir = '/home/samhaug/work1/ScS_reverb_data/20160130/'
-syn_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/FJ_v3.0_h6/FJ_3.0_h6_d28/'
-model = TauPyModel(model='prem_3.0_10')
-
-std = data_setup(data_dir)
-sts = synth_setup(syn_dir,std)
-#st_mask = sts.copy()
-
-'''
-for idx, tr in enumerate(std):
-    m = strip_reverb(std[idx],model)
-    std[idx].data *= 1-m
-    seispy.plot(std[0])
-    plt.show()
-'''
-
-
-sts.write('/home/samhaug/work1/ScS_reverb_sims/mineos/synth_test.pk',format='PICKLE')
-
-
-
+main()
 
 
