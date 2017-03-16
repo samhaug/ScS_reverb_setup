@@ -11,6 +11,9 @@ Purpose : Perform a migration to detect reflection coefficients of mid mantle
           See eq (14) of 'A Study of mid-mantle layering beneath the Western Pacific'
           1989, Revenaugh & Jordan.
 
+          This is similar to migrate_reverb, but should be more efficient and
+          easier to execute.
+
 Creation Date : 14-03-2017
 Last Modified : Tue 14 Mar 2017 11:54:11 AM EDT
 Created By : Samuel M. Haugland
