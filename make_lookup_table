@@ -22,8 +22,8 @@ and time.
 
 def main():
     model = TauPyModel(model='prem_0.0_10')
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_468_FJ/st_T.pk')
-    f = setup_h5('prem_468_20160130',st[0].stats.network)
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_368_FJ/st_T.pk')
+    f = setup_h5('prem_368_20160130',st[0].stats.network)
     for tr in st:
         find_reverb_times(tr,model,f)
 
@@ -48,6 +48,7 @@ def find_reverb_times(tr,model,h5file):
     stat = tr.stats.station
 
     ScS2 = []
+    sScS2 = []
     bScS2 = []
     bScS3 = []
     bScS4 = []
@@ -81,10 +82,12 @@ def find_reverb_times(tr,model,h5file):
                                              phase_list = topside)
         ScS2_p = model.get_travel_times(source_depth_in_km=evdp,
                                              distance_in_degree=gcarc,
-                                             phase_list = ['ScSScS'])
+                                             phase_list = ['ScSScS','sScSScS'])
 
 
         ScS2.append([d,ScS2_p[0].time])
+        sScS2.append([d,ScS2_p[1].time])
+
         bScS2.append([d,ba[0].time])
         bScS3.append([d,ba[1].time])
         bScS4.append([d,ba[2].time])
@@ -96,6 +99,7 @@ def find_reverb_times(tr,model,h5file):
         tScS5.append([d,ta[3].time])
 
     h5file.create_dataset(stat+'/ScS2',data=interp_reverb(np.array(ScS2)))
+    h5file.create_dataset(stat+'/sScS2',data=interp_reverb(np.array(sScS2)))
     h5file.create_dataset(stat+'/bScS2',data=interp_reverb(np.array(bScS2)))
     h5file.create_dataset(stat+'/bScS3',data=interp_reverb(np.array(bScS3)))
     h5file.create_dataset(stat+'/bScS4',data=interp_reverb(np.array(bScS4)))
