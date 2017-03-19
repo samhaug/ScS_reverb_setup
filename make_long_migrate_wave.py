@@ -22,12 +22,17 @@ import h5py
 import obspy
 import seispy
 from obspy.taup import TauPyModel
+from scipy.signal import tukey
+from scipy.signal import correlate
 
 def main():
     st = stream_setup()
     lkup = lkup_setup()
+    tr = st[10]
     #seispy.plot.plot(st[10],phase_list=['ScSScS','ScS^670ScSScS'])
-    mask_660(st[10],lkup)
+    master_mask = mask_670(tr,lkup)
+    new_mask = shift_depth(tr,master_mask,480)
+    return new_mask
 
 def lkup_setup():
     lkup_dir = '/home/samhaug/work1/ScS_reverb_sims/lookup_tables/'
@@ -46,10 +51,9 @@ def stream_setup():
        st[idx].stats.sac['o'] += -1468
     return st
 
-def mask_660(tr,lkup):
+def mask_670(tr,lkup):
     evdp = tr.stats.sac['evdp']
     gcarc = tr.stats.sac['gcarc']
-    model = TauPyModel('prem50')
     stat = tr.stats.station
 
     # t is for table
@@ -58,26 +62,64 @@ def mask_660(tr,lkup):
     sScS2 = t['sScS2'][0,1]
     dp = sScS2-ScS2
 
-    master_mask = []
+    master_mask = {}
     for keys in t:
-        if 'b' in t or 't' in t:
+        if keys[0] == 'b' or keys[0] == 't':
             mask = np.zeros(len(tr.data))
+            dmask = np.zeros(len(tr.data))
             i = np.argmin(np.abs(t[keys][:,0]-670))
-            # r to sr is the prem predicted depth phase separation for reverb
+            #r to sr is the prem predicted depth phase separation for reverb
             r = t[keys][i,1]-ScS2+400
             sr = dp+r
-            mask[r:sr] = 1.0
-            master_mask.append(mask)
-    print master_mask
-    plt.plot(tr.data)
-    for ii in master_mask:
-        plt.plot(ii,alpha=0.5)
-    plt.show()
-    return np.sum(master_mask,axis=0)
+            try:
+                mask[r:r+55] += 1.0*tukey(55,0.20)
+                dmask[sr:sr+55] += 1.0*tukey(55,0.20)
+                master_mask[keys] = (mask*tr.data)
+                master_mask['d'+keys] = (dmask*tr.data)
+            except ValueError:
+                continue
+    return master_mask
 
-#def shift_wavelets(tr,depth,lkup):
-#def write_wave_glossary(h5file,key,data):
+def shift_depth(tr,master_mask,depth):
+    model = TauPyModel('prem50')
+    gcarc = tr.stats.sac['gcarc']
+    evdp = tr.stats.sac['evdp']
+    a = model.get_travel_times(source_depth_in_km=evdp,distance_in_degree=gcarc,
+                           phase_list=['ScSScS','sScSScS'])
+    b = model.get_travel_times(source_depth_in_km=depth,distance_in_degree=gcarc,
+                           phase_list=['ScSScS','sScSScS'])
+    shift = int(a[1].time-a[0].time)-int(b[1].time-b[0].time)
+    new_mask = master_mask.copy()
 
-main()
+    for keys in new_mask:
+        if keys[0] == 'd':
+            new_mask[keys] = np.roll(new_mask[keys],shift)
+    return new_mask
+
+def shift_discont(tr,new_mask,lkup):
+    stat = tr.stats.station
+    for lkeys in lkup[stat]:
+        ScS2_t = lkup[stat+'/ScS2'][0,1]
+        sScS2_t = lkup[stat+'/sScS2'][0,1]
+        if lkeys == 'ScS2' or lkeys == 'sScS2':
+            continue
+        for mkeys in new_mask:
+            if lkeys in mkeys:
+                i = np.argmin(np.abs(lkup[stat+'/'+lkeys][:,0]-670))
+                d = np.arange(10,2800,2)
+                for ii in d:
+                    ti = np.argmin(np.abs(lkup[stat+'/'+lkeys][:,0]-d))
+                    if mkeys[0] == 'd':
+                        t670 = lkup[stat+'/'+lkeys][i,1]-sScS2_t
+                        td = lkup[stat+'/'+lkeys][i,1]-sScS2_t
+                    else:
+                        t670 = lkup[stat+'/'+lkeys][i,1]-ScS2_t
+                        td = lkup[stat+'/'+lkeys][i,1]-ScS2_t
+
+                    new_mask[mkeys]
+
+new_mask = main()
+
+
 
 
