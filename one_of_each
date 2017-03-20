@@ -1,0 +1,37 @@
+#!/home/samhaug/anaconda2/bin/python
+
+'''
+==============================================================================
+
+File Name : one_of_each.py
+Purpose : Use sort_network to make pk files for each network. Use this
+          code to select one station from each network and add to another
+          pk file called one_of_each.pk.
+Creation Date : 20-03-2017
+Last Modified :
+Created By : Samuel M. Haugland
+
+==============================================================================
+'''
+
+from subprocess import call
+from os import listdir
+from glob import glob
+import h5py
+import obspy
+import seispy
+
+def main():
+    pk_list = glob('*.pk')
+    one_of_each = obspy.core.Stream()
+
+    for ii in pk_list:
+        st = obspy.read(ii)
+        for tr in st:
+            tr.stats.location = tr.stats.sac['gcarc']
+        st.sort(['location'])
+        tr = st[int(len(st)/2.)]
+        tr.stats.station = tr.stats.network
+        one_of_each += tr
+    one_of_each.write('one_of_each.pk',format='PICKLE')
+main()

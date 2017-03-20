@@ -24,17 +24,26 @@ import seispy
 from obspy.taup import TauPyModel
 from scipy.signal import tukey
 from scipy.signal import correlate
+from scipy.signal import fftconvolve
 
 def main():
     st = stream_setup()
     lkup = lkup_setup()
     tr = st[10]
-    master_mask = mask_670(tr,lkup,plot=False)
-    new_mask = shift_depth(tr,master_mask,368)
-    response_list = shift_discont(tr,new_mask,lkup)
-    for idx,ii in enumerate(response_list[::10]):
+    master_mask = mask_670(tr,lkup,plot=True)
+    new_mask = shift_depth(tr,master_mask,468)
+    switch_mask = t_b_switch(new_mask)
+    response_array,depths = shift_discont(tr,switch_mask,lkup)
+    write_h5(response_array,depths,'test1.h5')
+    for idx,ii in enumerate(response_array[::10]):
         plt.plot(idx+ii/ii.max(),alpha=0.5,color='k')
     plt.show()
+
+def write_h5(response_array,depths,name):
+    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/long_migrate/'+name,'w')
+    f.create_dataset('response',data=response_array)
+    f.create_dataset('depths',data=depths)
+    f.close()
 
 def lkup_setup():
     lkup_dir = '/home/samhaug/work1/ScS_reverb_sims/lookup_tables/'
@@ -73,6 +82,8 @@ def mask_670(tr,lkup,**kwargs):
     if plot:
         plt.plot(tr.data,alpha=0.3,color='k')
     for keys in t:
+        if keys[-1] == '4' and keys[0] == 't':
+            continue
         if keys[0] == 'b' or keys[0] == 't':
             mask = np.zeros(len(tr.data))
             dmask = np.zeros(len(tr.data))
@@ -81,8 +92,8 @@ def mask_670(tr,lkup,**kwargs):
             r = t[keys][i,1]-ScS2+400
             sr = dp+r
             try:
-                mask[r+mshi:r+mshi+mlen] += 1.0*tukey(mlen,0.20)
-                dmask[sr+mshi:sr+mshi+mlen] += 1.0*tukey(mlen,0.20)
+                mask[r+mshi:r+mshi+mlen] += 1.0*tukey(mlen,0.50)
+                dmask[sr+mshi:sr+mshi+mlen] += 1.0*tukey(mlen,0.50)
                 master_mask[keys] = (mask*tr.data)
                 master_mask['d'+keys] = (dmask*tr.data)
                 if plot:
@@ -93,6 +104,24 @@ def mask_670(tr,lkup,**kwargs):
     if plot:
         plt.show()
     return master_mask
+
+def t_b_switch(new_mask):
+    switch_mask = new_mask.copy()
+    for keys in new_mask:
+        if keys[0] == 't':
+            b_key = 'b'+keys[1::]
+            b = -1*new_mask[b_key]
+            t = new_mask[keys]
+            cor = fftconvolve(t,b[::-1])
+            midpoint = cor.shape[0]/2
+            imax = np.where(cor == cor.max())[0][0]
+            roll = -1*(midpoint-imax)
+            t = np.roll(b,roll)
+            switch_mask[keys] = t
+        if keys[0] == 'b':
+            switch_mask[keys] = new_mask[keys]
+            continue
+    return switch_mask
 
 def shift_depth(tr,master_mask,depth):
     model = TauPyModel('prem50')
@@ -135,6 +164,9 @@ def shift_discont(tr,new_mask,lkup):
                 continue
         response_list.append(np.sum(single_response,axis=0))
     response_array = np.array(response_list)
-    return response_array
+    return response_array,depths
 
 main()
+
+
+
