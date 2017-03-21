@@ -5,6 +5,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.interpolate import UnivariateSpline
 import scipy
+from scipy.signal import gaussian
 #from scipy.interpolate import CubicSpline
 from matplotlib import pyplot as plt
 
@@ -13,37 +14,32 @@ Smooth all discontinuities except the 660.
 '''
 
 def main():
-    model = './models/prem_noocean.txt'
+    model = './models/noocean_notrans.txt'
     meta,cores,mantle = read_model(model)
-
-    #plt.plot(mantle[:,0],mantle[:,3])
-    #plt.show()
     start = np.where(np.abs(mantle[:,0]-mantle[:,0].max()) == 220000)[0].max()
     stop = np.where(np.abs(mantle[:,0]-mantle[:,0].max()) == 670000)[0].max()
     print start,stop
-    x = mantle[stop:start,0]
-    v = mantle[stop:start,3]
-    newx = np.linspace(x.min(),x.max(),num=100)
-    z = np.polyfit(x,v,1)
+    plt.plot(mantle[:,0],mantle[:,3])
+    x = mantle[:,0]
+    v = mantle[:,3]
+    vmid = mantle[63:87,3]
+    xmid = mantle[63:87,0]
+    vnew = np.linspace(vmid[0],vmid[-1],num=len(vmid))
+    xnew = np.linspace(xmid[0],xmid[-1],num=len(vmid))
+    #plt.plot(x,v)
+    #plt.plot(xmid,vmid)
+    #plt.plot(xnew,vnew)
+    z = np.polyfit(xmid,vmid,2)
     p = np.poly1d(z)
-    plt.plot(x,v)
-    plt.plot(newx,p(newx))
-    #plt.plot(newx,newv)
-    plt.show()
-
-    return mantle
-    #f = interp1d(mantle[:,0],mantle[:,1::],axis=0)
-    #int_mant = np.hstack((np.transpose([r]),f(r)))
-    #int_mant[:,3]*=(1+out)
-    #int_mant[:,7]*=(1+out)
-    #plt.plot(int_mant[:,0],int_mant[:,3])
+    #plt.plot(xnew,p(xnew))
     #plt.show()
-
-    #output_prem = np.vstack((cores,int_mant))
-    #output_prem = np.around(output_prem,3)
-
-    #write_output(output_prem,2700000,0.01)
-
+    mantle[63:87,3] = p(xnew)
+    mantle[63:87,7] = p(xnew)
+    mantle[63:87,0] = xnew
+    plt.plot(mantle[:,0],mantle[:,3])
+    plt.show()
+    out = np.vstack((cores,mantle))
+    write_output(out,'smooth','smooth',title='smoothprem.txt')
 
 def read_model(filename):
     a = open(filename)
@@ -66,4 +62,4 @@ def write_output(out_array,discont,amp,**kwargs):
         f.write('{}   {}   {}\n'.format(str(out_array.shape[0]),33,66))
         np.savetxt(f, out_array, delimiter="   ",fmt='%.1f')
 
-mantle =  main()
+main()

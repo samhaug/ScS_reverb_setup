@@ -7,7 +7,7 @@ File Name : long_migrate.py
 Purpose : Use respnse_array from h5file made with make_long_migrate_wave.py
           to create a depth migrated reflection profile for data
 Creation Date : 20-03-2017
-Last Modified : Mon 20 Mar 2017 06:55:04 PM EDT
+Last Modified : Tue 21 Mar 2017 10:49:45 AM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -32,7 +32,7 @@ def stream_setup():
     st = obspy.read(sim_dir+'prem_468_FJ/st_T.pk')
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./75,freqmax=1./15,zerophase=True)
+    st.filter('bandpass',freqmin=1./60,freqmax=1./10,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))

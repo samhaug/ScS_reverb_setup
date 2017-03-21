@@ -31,7 +31,7 @@ def main():
     lkup = lkup_setup()
     tr = st[10]
     master_mask = mask_670(tr,lkup,plot=True)
-    new_mask = shift_depth(tr,master_mask,468)
+    new_mask = shift_depth(tr,master_mask,368)
     switch_mask = t_b_switch(new_mask)
     response_array,depths = shift_discont(tr,switch_mask,lkup)
     write_h5(response_array,depths,'test1.h5')
@@ -55,7 +55,7 @@ def stream_setup():
     st = obspy.read(sim_dir+'prem_368_FJ/st_T.pk')
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./75,freqmax=1./15,zerophase=True)
+    st.filter('bandpass',freqmin=1./60,freqmax=1./10,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))

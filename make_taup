@@ -23,6 +23,5 @@ def write_taup(vel_array,fname):
         f.write('prem_model.tvel S\n')
         np.savetxt(f,vel_array,delimiter='   ',fmt='%0.4f')
 
-
 vel = read_mineos_vel('./models/prem_noocean.txt')
 write_taup(vel,'prem_3.0.tvel')
