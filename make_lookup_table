@@ -22,13 +22,13 @@ and time.
 
 def main():
     model = TauPyModel(model='prem_0.0_10')
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_468_FJ/st_T.pk')
-    f = setup_h5('prem_468_20160130_fuck',st[0].stats.network)
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_013016E/st_T.pk')
+    f = setup_h5('prem_013016E',st[0].stats.network)
     for tr in st:
         find_reverb_times(tr,model,f)
 
-def setup_h5(event_name,network_name):
-    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/'+network_name+'_'+event_name+'.h5','w')
+def setup_h5(event_name):
+    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/lookup_tables/'+event_name+'.h5','w')
     return f
 
 def interp_reverb(reverb_array):

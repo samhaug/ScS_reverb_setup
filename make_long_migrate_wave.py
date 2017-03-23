@@ -22,17 +22,19 @@ import h5py
 import obspy
 import seispy
 from obspy.taup import TauPyModel
-from scipy.signal import tukey
+from scipy.signal import cosine
 from scipy.signal import correlate
 from scipy.signal import fftconvolve
 
 def main():
     st = stream_setup()
     lkup = lkup_setup()
-    tr = st[10]
+    tr = st[0]
     master_mask = mask_670(tr,lkup,plot=True)
-    new_mask = shift_depth(tr,master_mask,368)
-    switch_mask = t_b_switch(new_mask)
+    switch_mask = shift_depth(tr,master_mask,168)
+    #comment out this line unless switching bottom with topside
+    #switch_mask = t_b_switch(switch_mask)
+
     response_array,depths = shift_discont(tr,switch_mask,lkup)
     write_h5(response_array,depths,'test1.h5')
     for idx,ii in enumerate(response_array[::10]):
@@ -47,19 +49,20 @@ def write_h5(response_array,depths,name):
 
 def lkup_setup():
     lkup_dir = '/home/samhaug/work1/ScS_reverb_sims/lookup_tables/'
-    lkup = h5py.File(lkup_dir+'NA_prem_368_20160130.h5','r')
+    lkup = h5py.File(lkup_dir+'prem_013016E.h5','r')
     return lkup
 
 def stream_setup():
     sim_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/'
-    st = obspy.read(sim_dir+'prem_368_FJ/st_T.pk')
+    st = obspy.read(sim_dir+'prem_013016E/st_T.pk')
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./60,freqmax=1./10,zerophase=True)
+    st.filter('bandpass',freqmin=1./80,freqmax=1./15,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
        st[idx].stats.sac['o'] += -1468
+    st.sort(['location'])
     return st
 
 def mask_670(tr,lkup,**kwargs):
@@ -68,9 +71,9 @@ def mask_670(tr,lkup,**kwargs):
     gcarc = tr.stats.sac['gcarc']
     stat = tr.stats.station
     #mlen is length of wavelet window.
-    mlen = 35
+    mlen = 65
     #mshi is offset time of window sampler.
-    mshi = 5
+    mshi = -10
 
     # t is for table
     t = lkup[stat]
@@ -92,8 +95,8 @@ def mask_670(tr,lkup,**kwargs):
             r = t[keys][i,1]-ScS2+400
             sr = dp+r
             try:
-                mask[r+mshi:r+mshi+mlen] += 1.0*tukey(mlen,0.50)
-                dmask[sr+mshi:sr+mshi+mlen] += 1.0*tukey(mlen,0.50)
+                mask[r+mshi:r+mshi+mlen] += 1.0*cosine(mlen)**2
+                dmask[sr+mshi:sr+mshi+mlen] += 1.0*cosine(mlen)**2
                 master_mask[keys] = (mask*tr.data)
                 master_mask['d'+keys] = (dmask*tr.data)
                 if plot:
