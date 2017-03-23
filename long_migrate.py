@@ -7,7 +7,7 @@ File Name : long_migrate.py
 Purpose : Use respnse_array from h5file made with make_long_migrate_wave.py
           to create a depth migrated reflection profile for data
 Creation Date : 20-03-2017
-Last Modified : Thu 23 Mar 2017 03:03:52 PM EDT
+Last Modified : Thu 23 Mar 2017 03:06:36 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -25,7 +25,7 @@ from scipy.signal import correlate
 def main():
     st = stream_setup()
     response,depths = read_h5('test1.h5')
-    migrate(st[-1].data,response,depths)
+    migrate(st[0].data,response,depths)
 
 def stream_setup():
     sim_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/'

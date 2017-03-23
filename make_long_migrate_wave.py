@@ -23,6 +23,7 @@ import obspy
 import seispy
 from obspy.taup import TauPyModel
 from scipy.signal import cosine
+from scipy.signal import tukey
 from scipy.signal import correlate
 from scipy.signal import fftconvolve
 
@@ -33,7 +34,7 @@ def main():
     master_mask = mask_670(tr,lkup,plot=True)
     switch_mask = shift_depth(tr,master_mask,168)
     #comment out this line unless switching bottom with topside
-    #switch_mask = t_b_switch(switch_mask)
+    switch_mask = t_b_switch(switch_mask)
 
     response_array,depths = shift_discont(tr,switch_mask,lkup)
     write_h5(response_array,depths,'test1.h5')
@@ -71,9 +72,9 @@ def mask_670(tr,lkup,**kwargs):
     gcarc = tr.stats.sac['gcarc']
     stat = tr.stats.station
     #mlen is length of wavelet window.
-    mlen = 65
+    mlen = 75
     #mshi is offset time of window sampler.
-    mshi = -10
+    mshi = -20
 
     # t is for table
     t = lkup[stat]
@@ -95,16 +96,25 @@ def mask_670(tr,lkup,**kwargs):
             r = t[keys][i,1]-ScS2+400
             sr = dp+r
             try:
-                mask[r+mshi:r+mshi+mlen] += 1.0*cosine(mlen)**2
-                dmask[sr+mshi:sr+mshi+mlen] += 1.0*cosine(mlen)**2
+                #mask[r+mshi:r+mshi+mlen] += 1.0*cosine(mlen)**2
+                #dmask[sr+mshi:sr+mshi+mlen] += 1.0*cosine(mlen)**2
+                mask[r+mshi:r+mshi+mlen] += 1.0*tukey(mlen,0.5)**2
+                dmask[sr+mshi:sr+mshi+mlen] += 1.0*tukey(mlen,0.5)**2
                 master_mask[keys] = (mask*tr.data)
                 master_mask['d'+keys] = (dmask*tr.data)
                 if plot:
+                    plt.axvline(r+mshi,color='g')
+                    plt.axvline(r+mshi+mlen,color='g')
+                    plt.axvline(sr+mshi,color='g')
+                    plt.axvline(sr+mshi+mlen,color='g')
+                    plt.plot(dmask*0.01,color='r')
+                    plt.plot(mask*0.01,color='r')
                     plt.plot(tr.data*dmask,color='b')
                     plt.plot(tr.data*mask,color='b')
             except ValueError:
                 continue
     if plot:
+        plt.tight_layout()
         plt.show()
     return master_mask
 
@@ -148,7 +158,7 @@ def shift_depth(tr,master_mask,depth):
 
 def shift_discont(tr,new_mask,lkup):
     stat = tr.stats.station
-    depths = np.arange(10,2800,2)
+    depths = np.arange(30,2800,2)
     response_list = []
 
     for d in depths:
