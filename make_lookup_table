@@ -22,8 +22,8 @@ and time.
 
 def main():
     model = TauPyModel(model='prem_0.0_10')
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/prem_013016E/st_T.pk')
-    f = setup_h5('prem_013016E',st[0].stats.network)
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/081412_350_japan/st_T.pk')
+    f = setup_h5('081412_350_japan')
     for tr in st:
         find_reverb_times(tr,model,f)
 
@@ -72,14 +72,14 @@ def find_reverb_times(tr,model,h5file):
         bottomside = [
                       'ScS^'+ds+'ScS',
                       'ScS^'+ds+'ScSScS',
-                      'ScS^'+ds+'ScSScSScS',
-                      'ScS^'+ds+'ScSScSScSScS']
+                      'ScS^'+ds+'ScSScSScS']
+                      #'ScS^'+ds+'ScSScSScSScS']
 
         topside =    [
                       'ScSSv'+ds+'SScS',
                       'ScSSv'+ds+'SScSScS',
-                      'ScSSv'+ds+'SScSScSScS',
-                      'ScSSv'+ds+'SScSScSScSScS']
+                      'ScSSv'+ds+'SScSScSScS']
+                      #'ScSSv'+ds+'SScSScSScSScS']
 
         ba = model.get_travel_times(source_depth_in_km=evdp,
                                              distance_in_degree=gcarc,
@@ -92,24 +92,24 @@ def find_reverb_times(tr,model,h5file):
         bScS2.append([d,ba[0].time])
         bScS3.append([d,ba[1].time])
         bScS4.append([d,ba[2].time])
-        bScS5.append([d,ba[3].time])
+        #bScS5.append([d,ba[3].time])
 
         tScS2.append([d,ta[0].time])
         tScS3.append([d,ta[1].time])
         tScS4.append([d,ta[2].time])
-        tScS5.append([d,ta[3].time])
+        #tScS5.append([d,ta[3].time])
 
     h5file.create_dataset(stat+'/ScS2',data=np.array(ScS2))
     h5file.create_dataset(stat+'/sScS2',data=np.array(sScS2))
     h5file.create_dataset(stat+'/bScS2',data=interp_reverb(np.array(bScS2)))
     h5file.create_dataset(stat+'/bScS3',data=interp_reverb(np.array(bScS3)))
     h5file.create_dataset(stat+'/bScS4',data=interp_reverb(np.array(bScS4)))
-    h5file.create_dataset(stat+'/bScS5',data=interp_reverb(np.array(bScS5)))
+    #h5file.create_dataset(stat+'/bScS5',data=interp_reverb(np.array(bScS5)))
 
     h5file.create_dataset(stat+'/tScS2',data=interp_reverb(np.array(tScS2)))
     h5file.create_dataset(stat+'/tScS3',data=interp_reverb(np.array(tScS3)))
     h5file.create_dataset(stat+'/tScS4',data=interp_reverb(np.array(tScS4)))
-    h5file.create_dataset(stat+'/tScS5',data=interp_reverb(np.array(tScS5)))
+    #h5file.create_dataset(stat+'/tScS5',data=interp_reverb(np.array(tScS5)))
 
 main()
 

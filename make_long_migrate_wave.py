@@ -30,11 +30,11 @@ from scipy.signal import fftconvolve
 def main():
     st = stream_setup()
     lkup = lkup_setup()
-    tr = st[0]
+    tr = st[10]
     master_mask = mask_670(tr,lkup,plot=True)
     switch_mask = shift_depth(tr,master_mask,168)
     #comment out this line unless switching bottom with topside
-    switch_mask = t_b_switch(switch_mask)
+    #switch_mask = t_b_switch(switch_mask)
 
     response_array,depths = shift_discont(tr,switch_mask,lkup)
     write_h5(response_array,depths,'test1.h5')
@@ -58,7 +58,7 @@ def stream_setup():
     st = obspy.read(sim_dir+'prem_013016E/st_T.pk')
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./80,freqmax=1./15,zerophase=True)
+    st.filter('bandpass',freqmin=1./85,freqmax=1./15,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
@@ -72,7 +72,7 @@ def mask_670(tr,lkup,**kwargs):
     gcarc = tr.stats.sac['gcarc']
     stat = tr.stats.station
     #mlen is length of wavelet window.
-    mlen = 75
+    mlen = 80
     #mshi is offset time of window sampler.
     mshi = -20
 
@@ -96,17 +96,17 @@ def mask_670(tr,lkup,**kwargs):
             r = t[keys][i,1]-ScS2+400
             sr = dp+r
             try:
-                #mask[r+mshi:r+mshi+mlen] += 1.0*cosine(mlen)**2
-                #dmask[sr+mshi:sr+mshi+mlen] += 1.0*cosine(mlen)**2
-                mask[r+mshi:r+mshi+mlen] += 1.0*tukey(mlen,0.5)**2
-                dmask[sr+mshi:sr+mshi+mlen] += 1.0*tukey(mlen,0.5)**2
+                mask[r+mshi:r+mshi+mlen] += 1.0*cosine(mlen)**2
+                dmask[sr+mshi:sr+mshi+mlen] += 1.0*cosine(mlen)**2
+                #mask[r+mshi:r+mshi+mlen] += 1.0*tukey(mlen,0.5)**2
+                #dmask[sr+mshi:sr+mshi+mlen] += 1.0*tukey(mlen,0.5)**2
                 master_mask[keys] = (mask*tr.data)
                 master_mask['d'+keys] = (dmask*tr.data)
                 if plot:
-                    plt.axvline(r+mshi,color='g')
-                    plt.axvline(r+mshi+mlen,color='g')
-                    plt.axvline(sr+mshi,color='g')
-                    plt.axvline(sr+mshi+mlen,color='g')
+                    #plt.axvline(r+mshi,color='g')
+                    #plt.axvline(r+mshi+mlen,color='g')
+                    #plt.axvline(sr+mshi,color='g')
+                    #plt.axvline(sr+mshi+mlen,color='g')
                     plt.plot(dmask*0.01,color='r')
                     plt.plot(mask*0.01,color='r')
                     plt.plot(tr.data*dmask,color='b')
