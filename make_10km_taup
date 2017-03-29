@@ -27,7 +27,7 @@ def write_taup(vel_array,fname):
     new_mantle = f(new_mantle_rad)
     new_mantle_val = f(new_mantle_rad_5)
     new_mantle = np.repeat(new_mantle,2,axis=0)
-    new_mantle[0:-1,1::] = new_mantle_val[:,1::]
+    new_mantle[:,1::] = new_mantle_val[:,1::]
     #for ii,idx in enumerate(new_mantle[1:-2:2]):
     #    new_mantle[ii,1] = np.mean([new_mantle[ii-1,1],new_mantle[ii+1,1]])
     #    new_mantle[ii,2] = np.mean([new_mantle[ii-1,2],new_mantle[ii+1,2]])
@@ -41,5 +41,9 @@ def write_taup(vel_array,fname):
         np.savetxt(f,vel_array,delimiter='   ',fmt='%0.4f')
 
 #for ii in listdir('./perturb_220'):
-vel = read_mineos_vel('./vel_perturb/vel_0.0.txt')
-write_taup(vel,'prem_0.0_10.tvel')
+vel = read_mineos_vel('./vel_perturb/vel_9.0.txt')
+write_taup(vel,'prem_9.0_10.tvel')
+
+for ii in listdir('./vel_perturb'):
+    vel = read_mineos_vel('./vel_perturb/'+ii)
+    write_taup(vel,'prem_'+ii.split('.txt')[0].split('_')[1]+'_10.tvel')
