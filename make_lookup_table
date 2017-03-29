@@ -22,8 +22,8 @@ and time.
 
 def main():
     model = TauPyModel(model='prem_0.0_10')
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/081412_350_japan/st_T.pk')
-    f = setup_h5('081412_350_japan')
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/081412_325_japan/st_T.pk')
+    f = setup_h5('081412_325_japan')
     for tr in st:
         find_reverb_times(tr,model,f)
 

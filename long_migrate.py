@@ -7,7 +7,7 @@ File Name : long_migrate.py
 Purpose : Use respnse_array from h5file made with make_long_migrate_wave.py
           to create a depth migrated reflection profile for data
 Creation Date : 20-03-2017
-Last Modified : Fri 24 Mar 2017 03:03:45 PM EDT
+Last Modified : Sun 26 Mar 2017 02:22:57 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -31,10 +31,10 @@ def main():
 
 def stream_setup():
     sim_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/'
-    st = obspy.read(sim_dir+'prem_013016E/st_T.pk')
+    st = obspy.read(sim_dir+'081412_350_japan/st_T.pk')
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./85,freqmax=1./15,zerophase=True)
+    st.filter('bandpass',freqmin=1./80,freqmax=1./15,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
