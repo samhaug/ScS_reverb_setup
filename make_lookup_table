@@ -21,8 +21,8 @@ and time.
 '''
 
 def main():
-    model = TauPyModel(model='prem_9.0')
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/japan_v9.0/japan_v9.0_h350/st_T.pk')
+    model = TauPyModel(model='prem_9.0_10')
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_sims/mineos/013016_japan/jap_9.0/st_T.pk')
     f = setup_h5('japan_9.0_h350')
     for tr in st:
         find_reverb_times(tr,model,f)
@@ -45,7 +45,7 @@ def find_reverb_times(tr,model,h5file):
 
     evdp = tr.stats.sac['evdp']
     gcarc = tr.stats.sac['gcarc']
-    print evdp,gcarc
+    print('Depth: {} km, gcarc: {} deg'.format(evdp,gcarc))
     stat = tr.stats.station
 
     ScS2 = []
@@ -67,7 +67,7 @@ def find_reverb_times(tr,model,h5file):
     ScS2.append([0,ScS2_p[0].time])
     sScS2.append([0,ScS2_p[1].time])
 
-    for d in np.arange(100,2900,100):
+    for d in np.arange(20,2900,100):
 
         ds = str(d)
         bottomside = [

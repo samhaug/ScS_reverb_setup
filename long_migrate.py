@@ -7,7 +7,7 @@ File Name : long_migrate.py
 Purpose : Use respnse_array from h5file made with make_long_migrate_wave.py
           to create a depth migrated reflection profile for data
 Creation Date : 20-03-2017
-Last Modified : Sun 26 Mar 2017 02:22:57 PM EDT
+Last Modified : Fri 31 Mar 2017 01:01:04 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -21,24 +21,31 @@ import h5py
 import obspy
 import seispy
 from scipy.signal import correlate
+from obspy.taup import TauPyModel
 
 def main():
-    st = stream_setup()
-    tr = st[10]
+    st = stream_setup('prem_9.0_10')
+    tr = st[-7]
     response,depths = read_h5('test1.h5')
     R,depths = migrate(tr,response,depths)
     save_migrate(tr,R,depths)
 
-def stream_setup():
-    sim_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/'
-    st = obspy.read(sim_dir+'081412_350_japan/st_T.pk')
-    st.integrate().detrend().integrate().detrend()
+def stream_setup(model):
+    model = TauPyModel(model=model)
+    sim_dir = '/home/samhaug/work1/ScS_reverb_data/'
+    st = obspy.read(sim_dir+'013016_japan/st_T.pk')
+    st.integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./80,freqmax=1./15,zerophase=True)
+    st.filter('bandpass',freqmin=1./75,freqmax=1./10,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
-       st[idx].stats.sac['o'] += -1468
+       arrival = model.get_travel_times(source_depth_in_km=st[idx].stats.sac['evdp'],
+                                        distance_in_degree=st[idx].stats.sac['gcarc'],
+                                        phase_list=['ScSScS'])
+       o = arrival[0].time-400.
+       st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
+       st[idx].stats.sac['o'] += -1*o
     st.sort(['location'])
     return st
 

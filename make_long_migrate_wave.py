@@ -30,12 +30,12 @@ from scipy.signal import gaussian
 from scipy.optimize import curve_fit
 
 def main():
-    st = stream_setup('prem_9.0')
+    st = stream_setup('prem_9.0_10')
     lkup = lkup_setup()
-    tr = st[20]
+    tr = st[-7]
     master_mask,gauss_fit_mask = mask_670(tr,lkup,plot=True)
     #fit_gauss(gauss_fit_mask)
-    switch_mask = shift_depth(tr,master_mask,608,'prem_9.0')
+    switch_mask = shift_depth(tr,master_mask,168,'prem_9.0_10')
 
     #comment out this line unless switching bottom with topside
     switch_mask = t_b_switch(switch_mask)
@@ -60,10 +60,10 @@ def lkup_setup():
 def stream_setup(model):
     model = TauPyModel(model=model)
     sim_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/'
-    st = obspy.read(sim_dir+'japan_v9.0/japan_v9.0_h350/st_T.pk')
+    st = obspy.read(sim_dir+'013016_japan/jap_9.0/st_T.pk')
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./80,freqmax=1./15,zerophase=True)
+    st.filter('bandpass',freqmin=1./75,freqmax=1./10,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        arrival = model.get_travel_times(source_depth_in_km=st[idx].stats.sac['evdp'],
@@ -73,7 +73,7 @@ def stream_setup(model):
        st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
        st[idx].stats.sac['o'] += -1*o
     #seispy.plot.plot(st[10],phase_list=['ScSScS','ScS^670ScSScS'])
-    #seispy.plot.plot(st[20],phase_list=['ScSScS','ScS^670ScSScS'])
+    seispy.plot.plot(st[20],phase_list=['ScSScS','ScS^670ScSScS'])
     #seispy.plot.plot(st[0],phase_list=['ScSScS','ScS^670ScSScS'])
     st.sort(['location'])
     return st
@@ -140,7 +140,7 @@ def mask_670(tr,lkup,**kwargs):
     #mlen is length of wavelet window.
     mlen = 90
     #mshi is offset time of window sampler.
-    mshi = 0
+    mshi = -20
 
     # t is for table
     t = lkup[stat]
