@@ -30,16 +30,17 @@ from scipy.signal import gaussian
 from scipy.optimize import curve_fit
 
 def main():
-    model = 'prem_12.0_10'
-    shift_depth = 479
-    st = stream_setup(model,'350km_RUNS/111702_350_japan/st_T.pk')
-    lkup = lkup_setup('japan_111702_v12.0_h350.h5')
+    model = 'prem_9.0_10'
+    shift = 585
+    st = stream_setup(model,'VEL_PERT_RUNS/japan_100113/japan_100113_9.0/st_T.pk')
+    lkup = lkup_setup('japan_100113_v9.0.h5')
     tr = st[1]
 
-    master_mask,gauss_fit_mask = mask_670(tr,lkup,plot=True)
-    switch_mask = shift_depth(tr,master_mask,shift_depth,model)
+    #master_mask,gauss_fit_mask = mask_670(tr,lkup,plot=True)
+    master_mask,gauss_fit_mask = mask_670_single(tr,lkup,plot=True)
+    switch_mask = shift_depth(tr,master_mask,shift,model)
     #comment out this line unless switching bottom with topside
-    switch_mask = t_b_switch(switch_mask)
+    #switch_mask = t_b_switch(switch_mask)
 
     response_array,depths = shift_discont(tr,switch_mask,lkup)
     write_h5(response_array,depths,'test1.h5')
@@ -65,7 +66,7 @@ def stream_setup(model,stream):
     st = obspy.read(sim_dir+stream)
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./75,freqmax=1./15,zerophase=True)
+    st.filter('bandpass',freqmin=1./80,freqmax=1./10,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        arrival = model.get_travel_times(source_depth_in_km=st[idx].stats.sac['evdp'],
@@ -79,6 +80,79 @@ def stream_setup(model,stream):
     #seispy.plot.plot(st[0],phase_list=['ScSScS','ScS^670ScSScS'])
     st.sort(['location'])
     return st
+
+def mask_670_single(tr,lkup,**kwargs):
+    plot = kwargs.get('plot',False)
+    evdp = tr.stats.sac['evdp']
+    gcarc = tr.stats.sac['gcarc']
+    stat = tr.stats.station
+    #mlen is length of wavelet window.
+    mlen = 90
+    #mshi is offset time of window sampler.
+    mshi = -30
+
+    # t is for table
+    t = lkup[stat]
+    ScS2 = t['ScS2'][0,1]
+    sScS2 = t['sScS2'][0,1]
+    dp = sScS2-ScS2
+
+    master_mask = {}
+    gauss_fit_mask = {}
+    if plot:
+        plt.plot(tr.data,alpha=0.3,color='k')
+    for keys in t:
+        if keys[-1] == '4' and keys[0] == 't':
+            continue
+        if keys[0] == 'b':
+            mask = np.zeros(len(tr.data))
+            dmask = np.zeros(len(tr.data))
+            i = np.argmin(np.abs(t[keys][:,0]-670))
+            #r to sr is the prem predicted depth phase separation for reverb
+            r = t[keys][i,1]-ScS2+400
+            sr = dp+r
+            try:
+                #mask[int(r+mshi):int(r+mshi+mlen)] += 1.0*cosine(int(mlen))**2
+                mask[int(r+mshi):int(r+mshi+mlen)] += 1.0*tukey(int(mlen),0.6)
+                dmask[int(sr+mshi):int(sr+mshi+mlen)] += np.zeros(int(mlen))
+                master_mask[keys] = (mask*tr.data)
+                master_mask['d'+keys] = (dmask*tr.data)
+                gauss_fit_mask[keys] = (mask*tr.data)[int(r+mshi):int(r+mshi+mlen)]
+                gauss_fit_mask['d'+keys] = (mask*tr.data)[int(sr+mshi):int(sr+mshi+mlen)]
+                if plot:
+                    plt.plot(dmask*0.01,color='r')
+                    plt.plot(mask*0.01,color='r')
+                    plt.plot(tr.data*dmask,color='b')
+                    plt.plot(tr.data*mask,color='b')
+            except ValueError:
+                continue
+        if keys[0] == 't':
+            mask = np.zeros(len(tr.data))
+            dmask = np.zeros(len(tr.data))
+            i = np.argmin(np.abs(t[keys][:,0]-670))
+            #r to sr is the prem predicted depth phase separation for reverb
+            r = int(t[keys][i,1]-ScS2+400)
+            sr = int(dp+r)
+            try:
+                mask[r+mshi:r+mshi+mlen] += np.zeros(int(mlen))
+                #dmask[sr+mshi:sr+mshi+mlen] += 1.0*cosine(int(mlen))**2
+                dmask[sr+mshi:sr+mshi+mlen] += 1.0*tukey(int(mlen),0.6)
+                master_mask[keys] = (mask*tr.data)
+                master_mask['d'+keys] = (dmask*tr.data)
+                gauss_fit_mask[keys] = (mask*tr.data)[r+mshi:r+mshi+mlen]
+                gauss_fit_mask['d'+keys] = (mask*tr.data)[sr+mshi:sr+mshi+mlen]
+                if plot:
+                    plt.plot(dmask*0.01,color='r')
+                    plt.plot(mask*0.01,color='r')
+                    plt.plot(tr.data*dmask,color='b')
+                    plt.plot(tr.data*mask,color='b')
+            except ValueError:
+                continue
+
+    if plot:
+        plt.tight_layout()
+        plt.show()
+    return master_mask,gauss_fit_mask
 
 def mask_670(tr,lkup,**kwargs):
     plot = kwargs.get('plot',False)
