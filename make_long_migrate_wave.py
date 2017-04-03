@@ -30,21 +30,23 @@ from scipy.signal import gaussian
 from scipy.optimize import curve_fit
 
 def main():
-    st = stream_setup('prem_9.0_10')
-    lkup = lkup_setup()
-    tr = st[-7]
-    master_mask,gauss_fit_mask = mask_670(tr,lkup,plot=True)
-    #fit_gauss(gauss_fit_mask)
-    switch_mask = shift_depth(tr,master_mask,168,'prem_9.0_10')
+    model = 'prem_12.0_10'
+    shift_depth = 479
+    st = stream_setup(model,'350km_RUNS/111702_350_japan/st_T.pk')
+    lkup = lkup_setup('japan_111702_v12.0_h350.h5')
+    tr = st[1]
 
+    master_mask,gauss_fit_mask = mask_670(tr,lkup,plot=True)
+    switch_mask = shift_depth(tr,master_mask,shift_depth,model)
     #comment out this line unless switching bottom with topside
     switch_mask = t_b_switch(switch_mask)
 
     response_array,depths = shift_discont(tr,switch_mask,lkup)
     write_h5(response_array,depths,'test1.h5')
-    #for idx,ii in enumerate(response_array[::10]):
-    #    plt.plot(idx+ii/ii.max(),alpha=0.5,color='k')
-    #plt.show()
+
+    for idx,ii in enumerate(response_array[::10]):
+        plt.plot(idx+ii/ii.max(),alpha=0.5,color='k')
+    plt.show()
 
 def write_h5(response_array,depths,name):
     f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/long_migrate/'+name,'w')
@@ -52,18 +54,18 @@ def write_h5(response_array,depths,name):
     f.create_dataset('depths',data=depths)
     f.close()
 
-def lkup_setup():
+def lkup_setup(lkup_table):
     lkup_dir = '/home/samhaug/work1/ScS_reverb_sims/lookup_tables/'
-    lkup = h5py.File(lkup_dir+'japan_9.0_h350.h5','r')
+    lkup = h5py.File(lkup_dir+lkup_table,'r')
     return lkup
 
-def stream_setup(model):
+def stream_setup(model,stream):
     model = TauPyModel(model=model)
     sim_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/'
-    st = obspy.read(sim_dir+'013016_japan/jap_9.0/st_T.pk')
+    st = obspy.read(sim_dir+stream)
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./75,freqmax=1./10,zerophase=True)
+    st.filter('bandpass',freqmin=1./75,freqmax=1./15,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        arrival = model.get_travel_times(source_depth_in_km=st[idx].stats.sac['evdp'],
@@ -73,64 +75,10 @@ def stream_setup(model):
        st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
        st[idx].stats.sac['o'] += -1*o
     #seispy.plot.plot(st[10],phase_list=['ScSScS','ScS^670ScSScS'])
-    seispy.plot.plot(st[20],phase_list=['ScSScS','ScS^670ScSScS'])
+    #seispy.plot.plot(st[20],phase_list=['ScSScS','ScS^670ScSScS'])
     #seispy.plot.plot(st[0],phase_list=['ScSScS','ScS^670ScSScS'])
     st.sort(['location'])
     return st
-
-def mask_670_taup(tr,model):
-    model =TauPyModel(model=model)
-    evdp = tr.stats.sac['evdp']
-    gcarc = tr.stats.sac['gcarc']
-    stat = tr.stats.station
-    phase_list = ['ScS^670ScS',
-                  'sScS^670ScS',
-                  'ScS^670ScSScS',
-                  'sScS^670ScSScS',
-                  'ScS^670ScSScSScS',
-                  'sScS^670ScSScSScS']
-    seispy.plot.plot(tr,phase_list=phase_list)
-
-    '''
-    #mlen is length of wavelet window.
-    mlen = 90
-    #mshi is offset time of window sampler.
-    mshi = 0
-
-    # t is for table
-    master_mask = {}
-    gauss_fit_mask = {}
-    if plot:
-        plt.plot(tr.data,alpha=0.3,color='k')
-    for keys in t:
-        if keys[-1] == '4' and keys[0] == 't':
-            continue
-        if keys[0] == 'b' or keys[0] == 't':
-            mask = np.zeros(len(tr.data))
-            dmask = np.zeros(len(tr.data))
-            i = np.argmin(np.abs(t[keys][:,0]-670))
-            #r to sr is the prem predicted depth phase separation for reverb
-            r = t[keys][i,1]-ScS2+400
-            sr = dp+r
-            try:
-                mask[r+mshi:r+mshi+mlen] += 1.0*cosine(mlen)**2
-                dmask[sr+mshi:sr+mshi+mlen] += 1.0*cosine(mlen)**2
-                master_mask[keys] = (mask*tr.data)
-                master_mask['d'+keys] = (dmask*tr.data)
-                gauss_fit_mask[keys] = (mask*tr.data)[r+mshi:r+mshi+mlen]
-                gauss_fit_mask['d'+keys] = (mask*tr.data)[sr+mshi:sr+mshi+mlen]
-                if plot:
-                    plt.plot(dmask*0.01,color='r')
-                    plt.plot(mask*0.01,color='r')
-                    plt.plot(tr.data*dmask,color='b')
-                    plt.plot(tr.data*mask,color='b')
-            except ValueError:
-                continue
-    if plot:
-        plt.tight_layout()
-        plt.show()
-    return master_mask,gauss_fit_mask
-    '''
 
 def mask_670(tr,lkup,**kwargs):
     plot = kwargs.get('plot',False)
@@ -138,9 +86,9 @@ def mask_670(tr,lkup,**kwargs):
     gcarc = tr.stats.sac['gcarc']
     stat = tr.stats.station
     #mlen is length of wavelet window.
-    mlen = 90
+    mlen = 30
     #mshi is offset time of window sampler.
-    mshi = -20
+    mshi = 0
 
     # t is for table
     t = lkup[stat]
@@ -163,8 +111,10 @@ def mask_670(tr,lkup,**kwargs):
             r = t[keys][i,1]-ScS2+400
             sr = dp+r
             try:
-                mask[r+mshi:r+mshi+mlen] += 1.0*cosine(mlen)**2
-                dmask[sr+mshi:sr+mshi+mlen] += 1.0*cosine(mlen)**2
+                #mask[r+mshi:r+mshi+mlen] += 1.0*cosine(mlen)**2
+                #dmask[sr+mshi:sr+mshi+mlen] += 1.0*cosine(mlen)**2
+                mask[r+mshi:r+mshi+mlen] += 1.0*tukey(mlen,0.4)
+                dmask[sr+mshi:sr+mshi+mlen] += 1.0*tukey(mlen,0.4)
                 master_mask[keys] = (mask*tr.data)
                 master_mask['d'+keys] = (dmask*tr.data)
                 gauss_fit_mask[keys] = (mask*tr.data)[r+mshi:r+mshi+mlen]
@@ -243,16 +193,6 @@ def shift_discont(tr,new_mask,lkup):
     response_array = np.array(response_list)
     return response_array,depths
 
-def fit_gauss(mask):
-    def make_wavelet(x,a,sigma):
-        return a*np.hstack((np.diff(gaussian(len(x),sigma)),0))
-
-    for keys in mask:
-        x = np.linspace(0,10,num=len(mask[keys]))
-        popt,pcov = curve_fit(make_wavelet,x,mask[keys])
-        plt.plot(mask[keys])
-        plt.plot(make_wavelet(x,*popt))
-        plt.show()
 main()
 
 

@@ -7,7 +7,7 @@ File Name : long_migrate.py
 Purpose : Use respnse_array from h5file made with make_long_migrate_wave.py
           to create a depth migrated reflection profile for data
 Creation Date : 20-03-2017
-Last Modified : Fri 31 Mar 2017 01:01:04 PM EDT
+Last Modified : Sun 02 Apr 2017 03:13:18 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -24,19 +24,19 @@ from scipy.signal import correlate
 from obspy.taup import TauPyModel
 
 def main():
-    st = stream_setup('prem_9.0_10')
-    tr = st[-7]
+    st = stream_setup('prem_12.0_10')
+    tr = st[1]
     response,depths = read_h5('test1.h5')
     R,depths = migrate(tr,response,depths)
     save_migrate(tr,R,depths)
 
 def stream_setup(model):
     model = TauPyModel(model=model)
-    sim_dir = '/home/samhaug/work1/ScS_reverb_data/'
-    st = obspy.read(sim_dir+'013016_japan/st_T.pk')
-    st.integrate().detrend()
+    sim_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/DEPTH_PERT_RUNS/japan_111702_v12/japan_v12.0_h0/'
+    st = obspy.read(sim_dir+'st_T.pk')
+    st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./75,freqmax=1./10,zerophase=True)
+    st.filter('bandpass',freqmin=1./75,freqmax=1./15,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        st[idx] = seispy.data.phase_window(tr,phase=['ScSScS'],window=(-400,2400))
