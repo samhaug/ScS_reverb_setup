@@ -7,7 +7,7 @@ File Name : long_migrate.py
 Purpose : Use respnse_array from h5file made with make_long_migrate_wave.py
           to create a depth migrated reflection profile for data
 Creation Date : 20-03-2017
-Last Modified : Mon 03 Apr 2017 04:53:33 PM EDT
+Last Modified : Mon 03 Apr 2017 06:16:45 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -25,8 +25,8 @@ from scipy.signal import tukey
 from obspy.taup import TauPyModel
 
 def main():
-    st = stream_setup('prem_9.0_10','VEL_PERT_RUNS/japan_100113/japan_100113_9.0/')
-    tr = mask_zeroth_order('prem_9.0_10',st[1])
+    st = stream_setup('prem_12.0_10','VEL_PERT_RUNS/japan_111702/japan_111702_12.0/')
+    tr = mask_zeroth_order('prem_12.0_10',st[1])
     response,depths = read_h5('test1.h5')
     R,depths = migrate(tr,response,depths)
     save_migrate(tr,R,depths)

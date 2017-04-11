@@ -30,14 +30,14 @@ from scipy.signal import gaussian
 from scipy.optimize import curve_fit
 
 def main():
-    model = 'prem_9.0_10'
-    shift = 585
-    st = stream_setup(model,'VEL_PERT_RUNS/japan_100113/japan_100113_9.0/st_T.pk')
-    lkup = lkup_setup('japan_100113_v9.0.h5')
-    tr = st[1]
+    model = 'prem_12.0_10'
+    shift = 168
+    st = stream_setup(model,'/DEPTH_PERT_RUNS/japan_013016_v12/japan_v12.0_h10/st_T.pk')
+    lkup = lkup_setup('japan_013016_v12.0_h10.h5')
+    tr = st[0]
 
     #master_mask,gauss_fit_mask = mask_670(tr,lkup,plot=True)
-    master_mask,gauss_fit_mask = mask_670_single(tr,lkup,plot=True)
+    master_mask,gauss_fit_mask = mask_670(tr,lkup,plot=True)
     switch_mask = shift_depth(tr,master_mask,shift,model)
     #comment out this line unless switching bottom with topside
     #switch_mask = t_b_switch(switch_mask)
@@ -160,9 +160,9 @@ def mask_670(tr,lkup,**kwargs):
     gcarc = tr.stats.sac['gcarc']
     stat = tr.stats.station
     #mlen is length of wavelet window.
-    mlen = 30
+    mlen = 90
     #mshi is offset time of window sampler.
-    mshi = 0
+    mshi = 30
 
     # t is for table
     t = lkup[stat]

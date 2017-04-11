@@ -50,8 +50,8 @@ def write_source(pert,NDK):
                        strike1,dip1,slip1,strike2,dip2,slip2
                ))
 
-NDK = '/home/samhaug/work1/ScS_reverb_data/111702_japan/NDK'
-pert_list = [-50,-40,-30,-20,-10,0,10,20,30,40,50]
+NDK = '/home/samhaug/work1/ScS_reverb_data/013016_japan/NDK'
+pert_list = [5,10,15,20,25]
 #pert_list = np.arange(-20,21,1)
 
 for ii in pert_list:
