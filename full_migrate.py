@@ -6,7 +6,7 @@
 File Name : full_migrate.py
 Purpose : Full migration workflow in one. make_long_migrate_wave+long_migrate
 Creation Date : 10-04-2017
-Last Modified : Mon 10 Apr 2017 03:54:26 PM EDT
+Last Modified : Wed 12 Apr 2017 05:34:57 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -29,24 +29,29 @@ from scipy.optimize import curve_fit
 
 
 def main():
-    model = 'prem_12.0_10'
-    shift = 168
-    index = 0
-    st = stream_setup_sim(model,'/DEPTH_PERT_RUNS/japan_013016_v12/japan_v12.0_h10/st_T.pk')
-    std = stream_setup_data('prem_12.0_10','VEL_PERT_RUNS/japan_111702/japan_111702_12.0/')
-    lkup = lkup_setup('japan_013016_v12.0_h10.h5')
-    tr = st[index]
-    master_mask,gauss_fit_mask = mask_670(tr,lkup,plot=True)
-    switch_mask = shift_depth(tr,master_mask,shift,model)
-    #comment out this line unless switching bottom with topside
-    #switch_mask = t_b_switch(switch_mask)
+    for index in range(0,10):
+        model = 'prem_12.0_10'
+        shift = 160
+        index = index
+        fmin = 1/80.
+        fmax = 1/10.
+        dirname = 'japan_013016'
+        st = stream_setup_sim(model,'/DEPTH_PERT_RUNS/japan_013016_v12/japan_v12.0_h10/st_T.pk',fmin,fmax)
+        #std = stream_setup_data('prem_12.0_10','013016_japan/',fmin,fmax)
+        std = st.copy()
+        lkup = lkup_setup('japan_013016_v12.0_h10.h5')
+        tr = st[index]
+        master_mask,gauss_fit_mask = mask_670(tr,lkup,plot=True)
+        switch_mask = shift_depth(tr,master_mask,shift,model)
+        #comment out this line unless switching bottom with topside
+        #switch_mask = t_b_switch(switch_mask)
 
-    response_array,depths = shift_discont(tr,switch_mask,lkup)
-    preview_response_array(response_array)
+        response_array,depths = shift_discont(tr,switch_mask,lkup)
+        preview_response_array(response_array)
 
-    tr = mask_zeroth_order(model,std[index])
-    R,depths = migrate(tr,response,depths)
-    save_migrate(tr,R,depths)
+        tr = mask_zeroth_order(model,std[index])
+        R,depths = migrate(tr,response_array,depths)
+        save_migrate(tr,R,depths,dirname)
 
 def preview_response_array(response_array):
     '''Preview greens functions'''
@@ -60,14 +65,14 @@ def lkup_setup(lkup_table):
     lkup = h5py.File(lkup_dir+lkup_table,'r')
     return lkup
 
-def stream_setup_sim(model,stream):
+def stream_setup_sim(model,stream,fmin,fmax):
     '''Prepare reverberative interval from best fitting stream'''
     model = TauPyModel(model=model)
     sim_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/'
     st = obspy.read(sim_dir+stream)
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
-    st.filter('bandpass',freqmin=1./80,freqmax=1./10,zerophase=True)
+    st.filter('bandpass',freqmin=fmin,freqmax=fmax,zerophase=True)
     st.normalize()
     for idx,tr in enumerate(st):
        arrival = model.get_travel_times(source_depth_in_km=st[idx].stats.sac['evdp'],
@@ -184,7 +189,7 @@ def mask_670(tr,lkup,**kwargs):
     #mlen is length of wavelet window.
     mlen = 90
     #mshi is offset time of window sampler.
-    mshi = 30
+    mshi = -20
 
     # t is for table
     t = lkup[stat]
@@ -336,29 +341,16 @@ def migrate(tr,response,depths):
     plt.show()
     return R,depths
 
-def save_migrate(tr,R,depths):
+def save_migrate(tr,R,depths,dirname):
     '''Save reflectivity profile'''
+    call('mkdir {}'.format('/home/samhaug/work1/ScS_reverb_sims/reflectivity_profiles/'+dirname),shell=True)
     print np.array([R]).T.shape,np.array([depths]).T.shape
     r = np.hstack((np.array([R]).T,np.array([depths]).T))
-    np.savetxt('/home/samhaug/work1/ScS_reverb_sims/reflectivity_profiles/{}_{}.dat'.format(
+    np.savetxt('/home/samhaug/work1/ScS_reverb_sims/reflectivity_profiles/'+dirname+'/{}_{}.dat'.format(
                tr.stats.station,tr.stats.network),r)
 
 main()
 
-'''
-def write_h5(response_array,depths,name):
-    '''write HDF5 file for reflectivity'''
-    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/long_migrate/'+name,'w')
-    f.create_dataset('response',data=response_array)
-    f.create_dataset('depths',data=depths)
-    f.close()
-def read_h5(name):
-    f = h5py.File('/home/samhaug/work1/ScS_reverb_sims/long_migrate/'+name,'r')
-    response = f['response'][...]
-    depths = f['depths'][...]
-    f.close()
-    return response,depths
-'''
 
 
 
