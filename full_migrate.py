@@ -6,7 +6,7 @@
 File Name : full_migrate.py
 Purpose : Full migration workflow in one. make_long_migrate_wave+long_migrate
 Creation Date : 10-04-2017
-Last Modified : Wed 12 Apr 2017 05:34:57 PM EDT
+Last Modified : Fri 14 Apr 2017 03:27:57 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -30,24 +30,25 @@ from scipy.optimize import curve_fit
 
 def main():
     for index in range(0,10):
-        model = 'prem_12.0_10'
+        model = 'prem_9.0_10'
         shift = 160
         index = index
         fmin = 1/80.
         fmax = 1/10.
-        dirname = 'japan_013016'
-        st = stream_setup_sim(model,'/DEPTH_PERT_RUNS/japan_013016_v12/japan_v12.0_h10/st_T.pk',fmin,fmax)
-        #std = stream_setup_data('prem_12.0_10','013016_japan/',fmin,fmax)
-        std = st.copy()
+        dirname = 'japan_100113'
+        st = stream_setup_sim(model,'/DEPTH_PERT_RUNS/japan_013016_v9.0/japan_013016_v9.0_h0/st_T.pk',fmin,fmax)
+        std = stream_setup_data(model,'100113_japan/',fmin,fmax)
         lkup = lkup_setup('japan_013016_v12.0_h10.h5')
         tr = st[index]
-        master_mask,gauss_fit_mask = mask_670(tr,lkup,plot=True)
-        switch_mask = shift_depth(tr,master_mask,shift,model)
+        #master_mask,gauss_fit_mask = mask_670_single(tr,lkup,plot=True)
+        master_mask = mask_670_taup(tr,model=model)
+        #switch_mask = shift_depth(tr,master_mask,shift,model)
+
         #comment out this line unless switching bottom with topside
         #switch_mask = t_b_switch(switch_mask)
 
-        response_array,depths = shift_discont(tr,switch_mask,lkup)
-        preview_response_array(response_array)
+        response_array,depths = shift_discont(tr,master_mask,lkup)
+        #preview_response_array(response_array)
 
         tr = mask_zeroth_order(model,std[index])
         R,depths = migrate(tr,response_array,depths)
@@ -106,8 +107,10 @@ def stream_setup_data(model,sim,fmin,fmax):
     st.sort(['location'])
     return st
 
-def mask_670_single(tr,lkup,**kwargs):
+def mask_670_taup(tr,**kwargs):
     '''Ignore depth phase when masking 670km discontinuity. Deep events'''
+    model = kwargs.get('model','prem50')
+    model = TauPyModel(model=model)
     plot = kwargs.get('plot',False)
     evdp = tr.stats.sac['evdp']
     gcarc = tr.stats.sac['gcarc']
@@ -116,6 +119,56 @@ def mask_670_single(tr,lkup,**kwargs):
     mlen = 90
     #mshi is offset time of window sampler.
     mshi = -30
+    phase_list = [
+                  'ScS^670ScS',
+                  'ScS^670ScSScS',
+                  'ScS^670ScSScSScS',
+                  'ScSSv670SScS',
+                  'ScSSv670SScSScS',
+                  'ScSSv670SScSScSScS']
+    keys_list = ['bScS2',
+                 'bScS3',
+                 'bScS4',
+                 'tScS2',
+                 'tScS3',
+                 'tScS4']
+
+    arrival = model.get_travel_times(source_depth_in_km=tr.stats.sac['evdp'],
+                                   distance_in_degree=tr.stats.sac['gcarc'],
+                                   phase_list=phase_list)
+    arrivalScS = model.get_travel_times(source_depth_in_km=tr.stats.sac['evdp'],
+                                   distance_in_degree=tr.stats.sac['gcarc'],
+                                   phase_list=['ScSScS'])
+
+    ScS2 = arrivalScS[0].time
+    master_mask = {}
+    for ii in arrival:
+        mask = np.zeros(len(tr.data))
+        key = keys_list[phase_list.index(ii.purist_name)]
+        r= ii.time-ScS2+400.
+        try:
+            mask[int(r+mshi):int(r+mshi+mlen)] += 1.0*tukey(int(mlen),0.6)
+        except ValueError:
+            continue
+        master_mask[key] = (mask*tr.data)
+    if plot:
+        plt.plot(tr.data,alpha=0.5,color='k')
+        for keys in master_mask:
+            plt.text(np.argmax(master_mask[keys]),0,keys)
+            plt.plot(master_mask[keys],alpha=0.5)
+        plt.show()
+    return master_mask
+
+def mask_670_single(tr,lkup,**kwargs):
+    '''Ignore depth phase when masking 670km discontinuity. Deep events'''
+    plot = kwargs.get('plot',False)
+    evdp = tr.stats.sac['evdp']
+    gcarc = tr.stats.sac['gcarc']
+    stat = tr.stats.station
+    #mlen is length of wavelet window.
+    mlen = 5
+    #mshi is offset time of window sampler.
+    mshi = 0
 
     # t is for table
     t = lkup[stat]
