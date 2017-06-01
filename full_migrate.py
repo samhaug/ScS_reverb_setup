@@ -6,7 +6,7 @@
 File Name : full_migrate.py
 Purpose : Full migration workflow in one. make_long_migrate_wave+long_migrate
 Creation Date : 10-04-2017
-Last Modified : Fri 14 Apr 2017 03:27:57 PM EDT
+Last Modified : Fri 14 Apr 2017 04:46:20 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -36,9 +36,9 @@ def main():
         fmin = 1/80.
         fmax = 1/10.
         dirname = 'japan_100113'
-        st = stream_setup_sim(model,'/DEPTH_PERT_RUNS/japan_013016_v9.0/japan_013016_v9.0_h0/st_T.pk',fmin,fmax)
+        st = stream_setup_sim(model,'/DEPTH_PERT_RUNS/japan_100113_v9.0/japan_100113_v9.0_h0/st_T.pk',fmin,fmax)
         std = stream_setup_data(model,'100113_japan/',fmin,fmax)
-        lkup = lkup_setup('japan_013016_v12.0_h10.h5')
+        lkup = lkup_setup('japan_100113_v9.0.h5')
         tr = st[index]
         #master_mask,gauss_fit_mask = mask_670_single(tr,lkup,plot=True)
         master_mask = mask_670_taup(tr,model=model)
@@ -69,7 +69,7 @@ def lkup_setup(lkup_table):
 def stream_setup_sim(model,stream,fmin,fmax):
     '''Prepare reverberative interval from best fitting stream'''
     model = TauPyModel(model=model)
-    sim_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos/'
+    sim_dir = '/home/samhaug/work1/ScS_reverb_sims/mineos'
     st = obspy.read(sim_dir+stream)
     st.integrate().detrend().integrate().detrend()
     st.interpolate(1)
