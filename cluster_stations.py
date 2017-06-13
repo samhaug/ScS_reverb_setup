@@ -5,7 +5,7 @@
 File Name : cluster_stations.py
 Purpose : cluster stations into regions within a circle
 Creation Date : 31-05-2017
-Last Modified : Wed 31 May 2017 12:00:02 PM EDT
+Last Modified : Tue 13 Jun 2017 07:38:18 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -23,9 +23,10 @@ from sklearn.cluster import k_means
 
 def main():
     #st = read_stream('/home/samhaug/work1/ScS_reverb_data/2015-11-24-mww76-peru-brazil-border-region-5/')
-    st = read_stream('/home/samhaug/work1/ScS_reverb_data/031011G_sac/')
+    #st = read_stream('/home/samhaug/work1/work1/ScS_reverb_data/obspyDMT/mag_7.0_8.0/20100812_115415.a/processed')
+    st = obspy.read('/home/samhaug/work1/ScS_reverb_data/obspyDMT/mag_7.0_8.0/20100812_115415.a/processed/st_T_clean.pk')
     st_out = cluster(st)
-    write_stream(st_out,'/home/samhaug/work1/ScS_reverb_data/031011G_sac/')
+    write_stream(st_out,'/home/samhaug/work1/ScS_reverb_data/obspyDMT/mag_7.0_8.0/20100812_115415.a/processed/')
 
 def read_stream(dirname):
     print 'reading'
@@ -40,7 +41,7 @@ def write_stream(st,dirname):
     print ('writing')
     st.write(dirname+'k_means.pk',format='PICKLE')
 
-def cluster(st,arc=4,k_number=100):
+def cluster(st,arc=3,k_number=200):
     print 'clustering'
     st_out = st[0:k_number].copy()
     for tr in st_out:
