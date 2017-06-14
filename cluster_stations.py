@@ -5,7 +5,7 @@
 File Name : cluster_stations.py
 Purpose : cluster stations into regions within a circle
 Creation Date : 31-05-2017
-Last Modified : Tue 13 Jun 2017 07:38:18 PM EDT
+Last Modified : Tue 13 Jun 2017 08:17:45 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -41,7 +41,7 @@ def write_stream(st,dirname):
     print ('writing')
     st.write(dirname+'k_means.pk',format='PICKLE')
 
-def cluster(st,arc=3,k_number=200):
+def cluster(st,arc=3,k_number=100):
     print 'clustering'
     st_out = st[0:k_number].copy()
     for tr in st_out:
@@ -63,6 +63,7 @@ def cluster(st,arc=3,k_number=200):
                 st_out[idx].stats.sac['data_list'].append(tr.data)
             else:
                 continue
+        print len(st_out[idx].stats.sac['data_list'])
         st_out[idx].data = np.mean(st_out[idx].stats.sac['data_list'],axis=0)
         st_out[idx].std = np.std(st_out[idx].stats.sac['data_list'],axis=0)
     return st_out
