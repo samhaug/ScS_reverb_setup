@@ -6,7 +6,7 @@
 File Name : find_bounce_points.py
 Purpose : find all reflection points for first order reverbs
 Creation Date : 14-06-2017
-Last Modified : Wed 14 Jun 2017 06:24:29 PM EDT
+Last Modified : Thu 15 Jun 2017 10:17:17 AM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -26,36 +26,39 @@ from obspy.taup import TauPyModel
 model = TauPyModel(model='prem')
 
 def main():
-    st = obspy.read('/home/samhaug/work1/ScS_reverb_data/obspyDMT/mag_7.0_8.0/20030620_061938.a/processed/st_T.pk')
-    fam1,fam2,fam3,fam4,fam5 = make_families()
+    dirname = '/home/samhaug/work1/ScS_reverb_data/obspyDMT/mag_7.0_8.0/20030620_061938.a/processed/'
+    f = h5py.File(dirname+'bounce_points.h5','w')
+    st = obspy.read(dirname+'st_T.pk')
+    st = seispy.filter.range_filter(st,(10,90))
+    fam_list = make_families()
+    dir_list = ['top','bot','top','bot','top']
     fam_bounce = []
-    color = ['b','r','g','k']
-    for idx,ii in enumerate(fam3):
-        phase_list = [ii.replace('#','670')]
-        c_list = np.array(bounce_family(st,phase_list,670))
-        plt.scatter(c_list[:,1],c_list[:,0],marker='+',color=color[idx])
-    plt.show()
+    depth = 670
+    for jdx,jj in enumerate(fam_list):
+        for idx,ii in enumerate(jj):
+            phase_list = [ii.replace('#',str(depth))]
+            c_list = np.array(bounce_family(st,phase_list,dir_list[jdx],depth))
+            f.create_dataset('fam_'+str(jdx)+'/'+phase_list[0],data=np.array(c_list))
 
 def make_families():
     first_family = ['sSv#SScS',
                     'sScSSv#S']
     second_family = ['ScS^#ScS']
     third_family = ['sSv#SScSScS',
-                    'sScSv#SScS',
+                    'sScSSv#SScS',
                     'sScSScSSv#S']
-    fourth_family = ['ScSScSScS',
-                     'ScS^#ScSScS',
-                     'ScSScS^#ScS']
+    fourth_family = ['ScS^#ScSScS',
+                      'ScSScS^#ScS']
     fifth_family = ['sSv#SScSScSScS',
-                    'sScSv#SScSScS',
-                    'sScSScSv#SScS',
+                    'sScSSv#SScSScS',
+                    'sScSScSSv#SScS',
                     'sScSScSScSSv#S']
-    return first_family,second_family,third_family,fourth_family,fifth_family
+    return [first_family,second_family,third_family,fourth_family,fifth_family]
 
-def bounce_family(st,phase_list,depth):
+def bounce_family(st,phase_list,direction,depth):
     c_list = []
     for tr in st:
-        c_list.append(_find_bounce_coord(tr,phase_list,'top',depth))
+        c_list.append(_find_bounce_coord(tr,phase_list,direction,depth))
     return c_list
 
 def _find_bounce_coord(tr,phase_list,direction,depth):
