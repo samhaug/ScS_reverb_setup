@@ -3,10 +3,10 @@
 '''
 ==============================================================================
 
-File Name : find_bounce_points.py
-Purpose : find all reflection points for first order reverbs
+File Name : set_bounce_points.py
+Purpose : find all reflection points for first order reverbs and set in tr.dict
 Creation Date : 14-06-2017
-Last Modified : Sat 24 Jun 2017 12:48:34 PM EDT
+Last Modified : Sat 24 Jun 2017 01:06:02 PM EDT
 Created By : Samuel M. Haugland
 
 ==============================================================================
@@ -37,8 +37,9 @@ def main():
     for jdx,jj in enumerate(fam_list):
         for idx,ii in enumerate(jj):
             phase_list = [ii.replace('#',str(depth))]
-            c_list = np.array(bounce_family(st,phase_list,dir_list[jdx],depth))
-            f.create_dataset('fam_'+str(jdx)+'/'+phase_list[0],data=np.array(c_list))
+            for tdx,tr in enumerate(st):
+                st[idx] = find_bounce_coord(tr,'fam_'+str(jdx),phase_list,dir_list[jdx],depth)
+    st.write(dirname+'st_T_bounce.pk',format='PICKLE')
 
 def make_families():
     first_family = ['sSv#SScS',
@@ -55,19 +56,20 @@ def make_families():
                     'sScSScSScSSv#S']
     return [first_family,second_family,third_family,fourth_family,fifth_family]
 
-def bounce_family(st,phase_list,direction,depth):
-    c_list = []
-    for tr in st:
-        c_list.append(_find_bounce_coord(tr,phase_list,direction,depth))
-    return c_list
-
-def _find_bounce_coord(tr,phase_list,direction,depth):
+def find_bounce_coord(tr,family,phase_list,direction,depth):
     arr = model.get_pierce_points_geo(source_depth_in_km=tr.stats.sac['evdp'],
                                       source_latitude_in_deg=tr.stats.sac['evla'],
                                       source_longitude_in_deg=tr.stats.sac['evlo'],
                                       receiver_latitude_in_deg=tr.stats.sac['stla'],
                                       receiver_longitude_in_deg=tr.stats.sac['stlo'],
                                       phase_list=phase_list)
+
+    tr.stats.bd = {}
+    tr.stats.bd['fam_0'] = {}
+    tr.stats.bd['fam_1'] = {}
+    tr.stats.bd['fam_2'] = {}
+    tr.stats.bd['fam_3'] = {}
+    tr.stats.bd['fam_4'] = {}
 
     a = np.array([[jj for jj in ii] for ii in arr[0].pierce])
     if direction == 'top':
@@ -76,7 +78,8 @@ def _find_bounce_coord(tr,phase_list,direction,depth):
             if a[ii,-3] != depth:
                 continue
             else:
-               return a[ii,-2],a[ii,-1]
+               tr.stats.bd[family][phase_list[0]] = [a[ii,-2],a[ii,-1]]
+               #return a[ii,-2],a[ii,-1]
 
     if direction == 'bot':
         ex = argrelextrema(a[:-3],np.less)[0]
@@ -84,7 +87,9 @@ def _find_bounce_coord(tr,phase_list,direction,depth):
             if a[ii,-3] != depth:
                 continue
             else:
-               return a[ii,-2],a[ii,-1]
+               tr.stats.bd[family][phase_list[0]] = [a[ii,-2],a[ii,-1]]
+               #return a[ii,-2],a[ii,-1]
+    return tr
 
 main()
 
